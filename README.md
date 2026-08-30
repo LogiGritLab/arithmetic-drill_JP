@@ -1,23 +1,8 @@
-
-<p align="center">
-  インタラクティブな数学学習ツール
-</p>
-
-<h2 align="center">
-  四則演算 練習サイト
-</h2>
-
-<p align="center">
-  小学生向けの無料・四則演算ドリル
-</p>
-
----
+# 🧮 四則演算ドリル
 
 ## 🌐 サイトURL
 
-[https://logigritlab.github.io/arithmetic-drill_JP/](https://logigritlab.github.io/arithmetic-drill_JP/)
-
----
+https://logigritlab.github.io/arithmetic-drill_JP/
 
 ## 📖 概要
 
@@ -26,8 +11,6 @@
 たし算・ひき算・かけ算・わり算の問題をランダムに生成するため、何度でも繰り返し学習できます。
 
 シンプルで使いやすい画面設計により、子どもたちが楽しみながら計算力を身につけられるよう設計されています。
-
----
 
 ## ✨ 特徴
 
@@ -39,8 +22,6 @@
 - スマートフォン・タブレット・PC対応
 - 完全無料
 
----
-
 ## 🚀 使い方
 
 1. 演算（たし算・ひき算・かけ算・わり算）を選びます。
@@ -50,8 +31,6 @@
 5. 「答える」ボタンまたは Enter キーを押します。
 6. 正解数・不正解数・連続正解数が自動で記録されます。
 
----
-
 ## 📂 ファイル構成
 
 ```text
@@ -59,24 +38,28 @@ index.html
 README.md
 
 css/
-    style.css
+└── style.css
 
 js/
-    app.js
+└── app.js
 
 images/
-    logo.png
-    
-    
-    
+└── logo.png
+```
+
 ## 🎯 LogiGrit Mathについて
-LogiGrit Math は、子どもから大人まで、世界中の学習者が楽しく数学を学べる教材や学習ツールを制作しています。
+
+**LogiGrit Math** は、子どもから大人まで、世界中の学習者が楽しく数学を学べる教材や学習ツールを制作しています。
+
 計算力だけでなく、
-思考力
-数学的な考え方
-問題解決力
+
+- 思考力
+- 数学的な考え方
+- 問題解決力
+
 を育てることを目指しています。
 
 ## 👤 作者
-Hiro
-LogiGrit Math
+
+**Hiro**  
+**LogiGrit Math**
