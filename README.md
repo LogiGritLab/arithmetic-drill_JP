@@ -20,7 +20,7 @@
 
 ## 🌐 サイトURL
 
-[https://logigritlab.github.io/math-tools/](https://logigritlab.github.io/arithmetic-drill_JP/)
+[https://logigritlab.github.io/arithmetic-drill_JP/](https://logigritlab.github.io/arithmetic-drill_JP/)
 
 ---
 
