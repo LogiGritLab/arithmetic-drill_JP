@@ -1,8 +1,3 @@
-<p align="center">
-  <img src="images/logo.png" alt="LogiGrit Math Logo" width="120">
-</p>
-
-<h1 align="center">LogiGrit Math</h1>
 
 <p align="center">
   インタラクティブな数学学習ツール
