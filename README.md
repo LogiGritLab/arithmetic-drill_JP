@@ -40,13 +40,5 @@
 
 ## 📂 ファイル構成
 
-```text
-.
-├── index.html       # メインのHTMLファイル
-├── README.md        # 本ドキュメント
-├── css/
-│   └── style.css    # スタイルシート
-├── js/
-│   └── app.js       # ロジック・アプリの挙動制御
-└── images/
-    └── logo.png     # ロゴ等の画像ファイル
+├── index.html       # メインファイル（HTML/CSS/JSがすべてこの1つにまとまっています）
+└── README.md        # 本ドキュメント
