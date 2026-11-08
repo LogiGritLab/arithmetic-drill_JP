@@ -267,6 +267,13 @@ button {
   box-shadow: 0 2px 6px rgba(26, 86, 142, 0.25);
 }
 
+#subCategoryMenu .chip.active {
+  background: var(--ok);
+  border-color: var(--ok);
+  color: #fff;
+  box-shadow: 0 2px 6px rgba(35, 118, 69, 0.25);
+}
+
 #digitMenu .chip {
   border-radius: 999px;
   font-size: 0.82rem;
@@ -984,6 +991,19 @@ button {
 }
 
 /* くりあがり・くりさがりの小さな補助数字 */
+
+/* たし算のくりあがりの小さな数字 */
+.carry-digit {
+  position: absolute;
+  bottom: 0.1em;
+  right: -0.4em; /* 位と位の間に配置するため右に少しはみ出させる */
+  font-size: 0.6em;
+  color: var(--red-pen); /* 添付画像に合わせて水色にしています */
+  font-weight: 900;
+  line-height: 1;
+}
+
+
 .hissan-sol-table tr.carry-row td {
   font-size: 0.8rem;
   height: 1.2em;
@@ -1332,7 +1352,13 @@ button {
           <button type="button" class="chip" data-op="div">÷ わり算</button>
         </div>
       </div>
-
+      <!-- ★ここを新規追加！「あり・なし」を選ぶメニュー -->
+      <div class="control-row" id="subCategoryRow" style="display: none;">
+        <span class="control-label" id="subCategoryLabel">条件</span>
+        <div class="chip-row" id="subCategoryMenu" role="tablist"></div>
+      </div>
+      <!-- ★ここまで追加 -->
+      
       <div class="control-row">
         <span class="control-label">ステップ</span>
         <div class="chip-row" id="digitMenu" role="tablist"></div>
@@ -1509,24 +1535,26 @@ button {
 const OP_META = {
   add: {
     labelJa: 'たし算', symbol: '＋',
+    hasCondition: true, conditionLabel: 'くりあがり',
+    conditions: [{ id: 'no', label: 'なし' }, { id: 'yes', label: 'あり' }],
     steps: [
-      { id: '1_no', label: '1けた(10まで)', digits: 1, hint: 'あわせていくつかな？' },
-      { id: '1_carry', label: '1けた(10をこえる)', digits: 1, hint: '「あといくつで10になるか」を考えよう' },
+      { id: '1', label: '1けた', digits: 1, hint: 'あわせていくつかな？' },
       { id: '2', label: '2けた', digits: 2, hint: '一の位から順番に計算しよう' },
-      { id: '3', label: '3けた', digits: 3, hint: '筆算フォームで下のスペースに計算を書けるよ' }
+      { id: '3', label: '3けた', digits: 3, hint: '位をそろえて計算しよう' }
     ]
   },
   sub: {
     labelJa: 'ひき算', symbol: '−',
+    hasCondition: true, conditionLabel: 'くりさがり',
+    conditions: [{ id: 'no', label: 'なし' }, { id: 'yes', label: 'あり' }],
     steps: [
-      { id: '1_no', label: '1けた(10まで)', digits: 1, hint: 'のこりはいくつかな？' },
-      { id: '1_borrow', label: '10をこえるひき算', digits: 1, hint: '10のまとまりから引いてみよう' },
-      { id: '2', label: '2けた', digits: 2, hint: 'くりさがりに気をつけよう' },
+      { id: '1', label: '1けた', digits: 1, hint: 'のこりはいくつかな？' },
+      { id: '2', label: '2けた', digits: 2, hint: '位をそろえて一の位から計算しよう' },
       { id: '3', label: '3けた', digits: 3, hint: '位をそろえて一の位から計算しよう' }
     ]
   },
   mul: {
-    labelJa: 'かけ算', symbol: '×',
+    labelJa: 'かけ算', symbol: '×', hasCondition: false,
     steps: [
       { id: '1', label: '九九 (1けた×1けた)', digits: 1, hint: '九九を思い出そう' },
       { id: '2_1', label: '2けた×1けた', digits: 2, hint: '一の位・十の位に順番にかけよう' },
@@ -1534,20 +1562,22 @@ const OP_META = {
     ]
   },
   div: {
-    labelJa: 'わり算', symbol: '÷',
+    labelJa: 'わり算', symbol: '÷', hasCondition: false,
     steps: [
       { id: '1', label: '九九の範囲', digits: 1, hint: 'わる数の段の九九から探そう' },
-      { id: '2', label: '2けた÷1けた', digits: 2, hint: '上の位から順番にわっていこう（わりきれます）' },
+      { id: '2', label: '2けた÷1けた', digits: 2, hint: '上の位から順番にわっていこう' },
       { id: '3', label: '3けた÷1〜2けた', digits: 3, hint: '「たてる→かける→ひく→おろす」の順に進めよう' }
     ]
   }
 };
 
-const STORAGE_KEY = 'math_notebook_v4_data';
+const STORAGE_KEY = 'math_notebook_v5_data';
 
 // 状態管理
 let currentOp = 'add';
-let currentStepId = '1_no';
+let currentCondition = 'no'; // ★追加
+let currentStepId = '1';
+
 let gameMode = 'free'; // 'free' | 'time10' | 'review'
 let a = 0;
 let b = 0;
@@ -1603,6 +1633,10 @@ const hintNote = document.getElementById('hintNote');
 const subTitle = document.getElementById('subTitle');
 const opMenu = document.getElementById('opMenu');
 const digitMenu = document.getElementById('digitMenu');
+const subCategoryRow = document.getElementById('subCategoryRow');
+const subCategoryLabel = document.getElementById('subCategoryLabel');
+const subCategoryMenu = document.getElementById('subCategoryMenu');
+
 const gameModeMenu = document.getElementById('gameModeMenu');
 const keypad = document.getElementById('keypad');
 const verticalSolutionPanel = document.getElementById('verticalSolutionPanel');
@@ -1763,6 +1797,7 @@ function generateNumbers() {
   if (gameMode === 'review' && userData.mistakes.length > 0) {
     const item = userData.mistakes[randInt(0, userData.mistakes.length - 1)];
     currentOp = item.op;
+    currentCondition = item.condition || 'no'; // ★復習用に追加
     currentStepId = item.stepId;
     a = item.a;
     b = item.b;
@@ -1773,33 +1808,52 @@ function generateNumbers() {
 
   for (let i = 0; i < 200; i++) {
     if (currentOp === 'add') {
-      if (currentStepId === '1_no') {
-        newA = randInt(1, 8);
-        newB = randInt(1, 10 - newA);
-      } else if (currentStepId === '1_carry') {
-        newA = randInt(2, 9);
-        newB = randInt(11 - newA, 9);
+      if (currentStepId === '1') {
+        if (currentCondition === 'no') {
+          newA = randInt(1, 8); newB = randInt(1, 9 - newA);
+        } else {
+          newA = randInt(2, 9); newB = randInt(11 - newA, 9);
+        }
       } else if (currentStepId === '2') {
-        newA = randInt(12, 89);
-        newB = randInt(12, 89);
-      } else {
-        newA = randInt(115, 899);
-        newB = randInt(115, 899);
+        if (currentCondition === 'no') {
+          newA = randInt(11, 88); newB = randInt(11, 88);
+          if ((newA % 10) + (newB % 10) >= 10 || Math.floor(newA / 10) + Math.floor(newB / 10) >= 10) continue; 
+        } else {
+          newA = randInt(12, 89); newB = randInt(12, 89);
+          if ((newA % 10) + (newB % 10) < 10) continue;
+        }
+      } else if (currentStepId === '3') {
+        if (currentCondition === 'no') {
+          newA = randInt(111, 888); newB = randInt(111, 888);
+          if ((newA % 10) + (newB % 10) >= 10 || Math.floor((newA % 100) / 10) + Math.floor((newB % 100) / 10) >= 10 || Math.floor(newA / 100) + Math.floor(newB / 100) >= 10) continue;
+        } else {
+          newA = randInt(112, 899); newB = randInt(112, 899);
+          if ((newA % 10) + (newB % 10) < 10 && Math.floor((newA % 100) / 10) + Math.floor((newB % 100) / 10) < 10) continue;
+        }
       }
     } else if (currentOp === 'sub') {
-      if (currentStepId === '1_no') {
-        newA = randInt(2, 10);
-        newB = randInt(1, newA - 1);
-      } else if (currentStepId === '1_borrow') {
-        newA = randInt(11, 18);
-        const minB = (newA - 10) + 1;
-        newB = randInt(minB, 9);
+      if (currentStepId === '1') {
+        if (currentCondition === 'no') {
+          newA = randInt(2, 9); newB = randInt(1, newA - 1);
+        } else {
+          newA = randInt(11, 18); newB = randInt(newA - 9, 9);
+        }
       } else if (currentStepId === '2') {
-        newA = randInt(22, 98);
-        newB = randInt(11, newA - 6);
-      } else {
-        newA = randInt(211, 989);
-        newB = randInt(105, newA - 25);
+        if (currentCondition === 'no') {
+          newA = randInt(21, 99); newB = randInt(11, newA - 1);
+          if ((newA % 10) < (newB % 10)) continue;
+        } else {
+          newA = randInt(21, 98); newB = randInt(12, newA - 1);
+          if ((newA % 10) >= (newB % 10)) continue;
+        }
+      } else if (currentStepId === '3') {
+        if (currentCondition === 'no') {
+          newA = randInt(211, 999); newB = randInt(111, newA - 1);
+          if ((newA % 10) < (newB % 10) || Math.floor((newA % 100) / 10) < Math.floor((newB % 100) / 10)) continue;
+        } else {
+          newA = randInt(211, 998); newB = randInt(112, newA - 1);
+          if ((newA % 10) >= (newB % 10) && Math.floor((newA % 100) / 10) >= Math.floor((newB % 100) / 10)) continue;
+        }
       }
     } else if (currentOp === 'mul') {
       if (currentStepId === '1') {
@@ -1836,6 +1890,9 @@ function generateNumbers() {
   lastA = a;
   lastB = b;
 }
+
+
+
 
 function getCorrectAnswer() {
   switch (currentOp) {
@@ -1895,13 +1952,23 @@ function buildGridTable(rows, rowClasses = [], cellDecorations = {}) {
 }
 
 function generateVerticalSolutionHTML(op, numA, numB) {
-  if (op === 'add') {
+if (op === 'add') {
     const ans = numA + numB;
     const sA = String(numA), sB = String(numB), sAns = String(ans);
     const maxLen = Math.max(sA.length, sB.length, sAns.length);
     const cols = maxLen + 1;
 
-    const carries = Array(cols).fill('');
+    // 上の数
+    const rowA = Array(cols).fill('');
+    for (let i = 0; i < sA.length; i++) rowA[cols - sA.length + i] = sA[i];
+
+    // 下の数
+    const rowB = Array(cols).fill('');
+    rowB[0] = '＋';
+    for (let i = 0; i < sB.length; i++) rowB[cols - sB.length + i] = sB[i];
+
+    // 繰り上がりの計算と配置（＋記号なしで位の右下に小さく配置）
+    let hasCarry = false;
     let c = 0;
     for (let i = 0; i < maxLen; i++) {
       const dA = i < sA.length ? Number(sA[sA.length - 1 - i]) : 0;
@@ -1909,29 +1976,24 @@ function generateVerticalSolutionHTML(op, numA, numB) {
       const sum = dA + dB + c;
       c = Math.floor(sum / 10);
       if (c > 0 && (cols - 2 - i) >= 0) {
-        carries[cols - 2 - i] = `+${c}`;
+        const targetCol = cols - 2 - i;
+        // 既存の数字（あれば）の後ろにspan要素として追加
+        rowB[targetCol] = rowB[targetCol] + `<span class="carry-digit">${c}</span>`;
+        hasCarry = true;
       }
     }
 
-    const rowA = Array(cols).fill('');
-    for (let i = 0; i < sA.length; i++) rowA[cols - sA.length + i] = sA[i];
-
-    const rowB = Array(cols).fill('');
-    rowB[0] = '＋';
-    for (let i = 0; i < sB.length; i++) rowB[cols - sB.length + i] = sB[i];
-
+    // 答え
     const rowAns = Array(cols).fill('');
     for (let i = 0; i < sAns.length; i++) rowAns[cols - sAns.length + i] = sAns[i];
 
-    const hasCarry = carries.some(v => v !== '');
-    const rows = hasCarry ? [carries, rowA, rowB, rowAns] : [rowA, rowB, rowAns];
-    const classes = hasCarry
-      ? ['carry-row', '', 'line-bottom', 'ans-row']
-      : ['', 'line-bottom', 'ans-row'];
+    // テーブルの行を組み立てる
+    const rows = [rowA, rowB, rowAns];
+    const classes = ['', 'line-bottom', 'ans-row'];
 
     return {
       html: buildGridTable(rows, classes),
-      note: hasCarry ? '赤字はくりあがった数です。一の位から順に加えます。' : '位をそろえて一の位からたし算します。'
+      note: hasCarry ? '小さく赤字で書かれた数はくりあがった数です。一の位から順に加えます。' : '位をそろえて一の位からたし算します。'
     };
   }
 
@@ -2213,18 +2275,44 @@ function getCurrentStepObj() {
 }
 
 function renderStepChips() {
-  const steps = OP_META[currentOp].steps;
+  const meta = OP_META[currentOp];
+
+  // くりあがり・くりさがりメニューの生成
+  if (meta.hasCondition) {
+    subCategoryRow.style.display = 'flex';
+    subCategoryLabel.textContent = meta.conditionLabel;
+    if (!meta.conditions.some(c => c.id === currentCondition)) {
+      currentCondition = meta.conditions[0].id;
+    }
+    subCategoryMenu.innerHTML = '';
+    meta.conditions.forEach(cond => {
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'chip' + (cond.id === currentCondition ? ' active' : '');
+      btn.textContent = cond.label;
+      btn.addEventListener('click', () => {
+        currentCondition = cond.id;
+        applyModeUI();
+        resetSessionIfTimeMode();
+        newProblem();
+      });
+      subCategoryMenu.appendChild(btn);
+    });
+  } else {
+    subCategoryRow.style.display = 'none';
+  }
+
+  // ステップ（1けた等）メニューの生成
+  const steps = meta.steps;
   if (!steps.some(s => s.id === currentStepId)) {
     currentStepId = steps[0].id;
   }
-
   digitMenu.innerHTML = '';
   steps.forEach(st => {
     const btn = document.createElement('button');
     btn.type = 'button';
     btn.className = 'chip' + (st.id === currentStepId ? ' active' : '');
     btn.textContent = st.label;
-    btn.dataset.step = st.id;
     btn.addEventListener('click', () => {
       currentStepId = st.id;
       applyModeUI();
@@ -2308,7 +2396,10 @@ function applyModeUI() {
 function updateProgressUI() {
   progressText.textContent = `${Math.min(time10Progress + 1, 10)} / 10 問目`;
   progressFill.style.width = `${(time10Progress / 10) * 100}%`;
-  const key = `${currentOp}_${currentStepId}`;
+
+const condStr = OP_META[currentOp].hasCondition ? `_${currentCondition}` : '';
+const key = `${currentOp}${condStr}_${currentStepId}`;
+
   const best = userData.bestTimes[key];
   bestTimeText.textContent = best ? `👑 ベスト: ${best.toFixed(1)}秒` : '👑 ベスト: --.-秒';
 }
@@ -2454,7 +2545,14 @@ function updateScoreboard() {
  * 解答判定
  */
 function submitAnswer() {
-  if (locked || answerBuffer === '') return;
+  if (locked) return;
+
+  // 未入力のまま答える（Enter）を押した場合は「スキップ」として次の問題へ
+  if (answerBuffer === '') {
+    newProblem();
+    return;
+  }
+
   const userAnswer = parseInt(answerBuffer, 10);
   if (Number.isNaN(userAnswer)) return;
 
@@ -2513,7 +2611,7 @@ function submitAnswer() {
       m => m.op === currentOp && m.a === a && m.b === b
     );
     if (!exists) {
-      userData.mistakes.push({ op: currentOp, stepId: currentStepId, a, b });
+      userData.mistakes.push({ op: currentOp, condition: currentCondition, stepId: currentStepId, a, b });
       saveUserData();
       syncHeaderBadges();
     }
@@ -2549,7 +2647,10 @@ function showTimeAttackResult() {
   const totalAttempts = correctCount + wrongCount;
   const acc = totalAttempts > 0 ? Math.round((correctCount / totalAttempts) * 100) : 100;
 
-  const key = `${currentOp}_${currentStepId}`;
+
+const condStr = OP_META[currentOp].hasCondition ? `_${currentCondition}` : '';
+const key = `${currentOp}${condStr}_${currentStepId}`;
+
   const prevBest = userData.bestTimes[key];
   let isNewRecord = false;
 
