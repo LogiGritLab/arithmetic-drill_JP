@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<meta name="description" content="四則演算 練習サイト - 視覚モデル・筆算・タイムアタック対応のインタラクティブ算数ドリル">
+<meta name="description" content="四則演算 練習サイト - 筆算の途中計算・手書きメモ・消しゴム・視覚モデル対応のインタラクティブ算数ドリル">
 <title>四則演算 ステップアップ練習ノート</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -34,11 +34,11 @@
   --gold: #b87c14;
   --gold-soft: #fcf3df;
   --purple: #6b3fa0;
-  --purple-soft: #f2ebf9;
 
   --shadow: 0 2px 4px rgba(17, 17, 17, 0.04), 0 12px 28px rgba(17, 17, 17, 0.07);
   --radius: 16px;
   --font-ui: "Zen Maru Gothic", -apple-system, BlinkMacSystemFont, sans-serif;
+  --font-mono: "Courier New", Consolas, "Zen Maru Gothic", monospace;
 }
 
 *, *::before, *::after {
@@ -93,8 +93,13 @@ button {
   position: relative;
   z-index: 1;
   width: 100%;
-  max-width: 580px;
+  max-width: 640px;
   margin: 0 auto;
+  transition: max-width 0.25s ease;
+}
+
+.app.is-vertical-app {
+  max-width: 820px;
 }
 
 /* ヘッダー・ステータスバー */
@@ -380,12 +385,12 @@ button {
   background: #fdf6e4;
   border: 2px solid var(--line);
   border-radius: 20px;
-  padding: 18px 18px 20px;
+  padding: 18px 18px 22px;
   box-shadow: var(--shadow);
   overflow: hidden;
 }
 
-/* カード内ツールバー（ヒント・筆算・手書きメモ切替） */
+/* カード内ツールバー */
 .card-tools {
   display: flex;
   justify-content: space-between;
@@ -430,15 +435,25 @@ button {
   color: var(--blue-pen);
 }
 
+.tool-btn.eraser-active {
+  background: var(--ng-soft);
+  border-color: var(--red-pen);
+  color: var(--red-pen);
+}
+
 .tool-btn:disabled {
-  opacity: 0.4;
+  opacity: 0.45;
   cursor: not-allowed;
+}
+
+.tool-btn[hidden] {
+  display: none !important;
 }
 
 /* フィードバック欄 */
 .feedback {
-  min-height: 48px;
-  margin-bottom: 8px;
+  min-height: 46px;
+  margin-bottom: 10px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -457,18 +472,18 @@ button {
 .feedback.ok {
   color: var(--ok);
   background: var(--ok-soft);
-  font-size: 1.25rem;
+  font-size: 1.2rem;
 }
 
 .feedback.ng {
   color: var(--ng);
   background: var(--ng-soft);
-  font-size: 1.2rem;
+  font-size: 1.15rem;
 }
 
 .feedback.empty {
   background: transparent;
-  min-height: 36px;
+  min-height: 32px;
 }
 
 .btn-next {
@@ -479,17 +494,58 @@ button {
   background: var(--ng);
   border: none;
   border-radius: 999px;
-  padding: 5px 16px;
+  padding: 6px 18px;
   cursor: pointer;
   box-shadow: 0 3px 0 #8f1912;
 }
 
-.btn-next:active {
-  transform: translateY(2px);
-  box-shadow: 0 1px 0 #8f1912;
+.btn-next.ok-next {
+  background: var(--ok);
+  box-shadow: 0 3px 0 #16522e;
 }
 
-/* 問題表示エリア & 手書きキャンバスラッパー */
+.btn-next:active {
+  transform: translateY(2px);
+}
+
+/* =========================================================
+   レイアウトシステム：通常（1カラム） vs 筆算（左右2カラム）
+   ========================================================= */
+.card-body {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+/* 筆算モード時：左に筆算＋手書き領域、右に答え入力＋テンキー/解答 */
+.card.is-vertical-layout .card-body {
+  display: grid;
+  grid-template-columns: 1.05fr 1fr;
+  gap: 20px;
+  align-items: start;
+}
+
+@media (max-width: 620px) {
+  .card.is-vertical-layout .card-body {
+    grid-template-columns: 1fr;
+    gap: 16px;
+  }
+}
+
+.left-pane {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+.right-pane {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+/* 問題＆手書きメモワークスペース */
 .workspace {
   position: relative;
   min-height: 110px;
@@ -497,7 +553,40 @@ button {
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  padding: 8px 0;
+  padding: 10px 8px;
+  border-radius: 14px;
+  transition: min-height 0.2s ease;
+}
+
+/* 筆算モード時は下に計算を書けるよう高さを大きく確保し、問題を上部に配置 */
+.card.is-vertical-layout .workspace {
+  min-height: 360px;
+  justify-content: flex-start;
+  padding-top: 26px;
+  background-color: rgba(255, 255, 255, 0.65);
+  background-image:
+    linear-gradient(to right, rgba(47, 111, 168, 0.12) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(47, 111, 168, 0.12) 1px, transparent 1px);
+  background-size: 24px 24px;
+  border: 2px dashed var(--blue-pen);
+}
+
+.scratch-guide {
+  display: none;
+  position: absolute;
+  bottom: 8px;
+  left: 0;
+  right: 0;
+  text-align: center;
+  font-size: 0.75rem;
+  color: var(--blue-pen);
+  opacity: 0.75;
+  pointer-events: none;
+  user-select: none;
+}
+
+.card.is-vertical-layout .scratch-guide {
+  display: block;
 }
 
 .scratch-canvas {
@@ -508,24 +597,31 @@ button {
   z-index: 2;
   pointer-events: none;
   touch-action: none;
+  border-radius: 12px;
 }
 
 .scratch-canvas.active {
   pointer-events: auto;
   cursor: crosshair;
-  background: rgba(255, 255, 255, 0.25);
-  border: 1.5px dashed var(--blue-pen);
-  border-radius: 12px;
 }
 
-/* 横書き問題表示 */
+.scratch-canvas.active.is-eraser {
+  cursor: cell;
+}
+
+.card:not(.is-vertical-layout) .scratch-canvas.active {
+  background: rgba(255, 255, 255, 0.3);
+  border: 2px dashed var(--blue-pen);
+}
+
+/* 横書き問題表示（通常モード） */
 .problem {
   display: flex;
   flex-wrap: wrap;
   align-items: baseline;
   justify-content: center;
   gap: 6px 6px;
-  font-size: 3.6rem;
+  font-size: 3.5rem;
   font-weight: 900;
   line-height: 1.2;
   color: var(--ink);
@@ -534,69 +630,134 @@ button {
   z-index: 1;
 }
 
-.problem.compact { font-size: 3rem; }
-.problem.tight { font-size: 2.3rem; }
-
-/* 筆算（縦書き）モード */
-.problem.vertical {
-  display: inline-grid;
-  grid-template-columns: auto auto;
-  justify-items: end;
-  align-items: baseline;
-  gap: 2px 12px;
-  font-size: 2.8rem;
-  font-variant-numeric: tabular-nums;
-  padding: 8px 24px;
-  background: rgba(255, 255, 255, 0.55);
-  border-radius: 12px;
-}
-
-.problem.vertical #numA {
-  grid-column: 2;
-  letter-spacing: 0.12em;
-    padding-right: 12px; /* ★追加: 回答枠の余白と合わせる */
-
-}
-
-.problem.vertical #opSymbol {
-  grid-column: 1;
-  grid-row: 2;
-  margin: 0;
-}
-
-.problem.vertical #numB {
-  grid-column: 2;
-  grid-row: 2;
-  letter-spacing: 0.12em;
-    padding-right: 12px; /* ★追加: 回答枠の余白と合わせる */
-
-}
-
-.problem.vertical .eq {
-  display: none;
-}
-
-.problem.vertical .answer-wrap {
-  grid-column: 1 / 3;
-  grid-row: 3;
-  width: 100%;
-  justify-content: flex-end;
-  border-top: 3.5px solid var(--ink);
-  padding-top: 6px;
-  margin-top: 4px;
-}
-
-/* ★新規追加: 回答枠の中の数字も間隔(桁幅)を合わせる */
-.problem.vertical .answer-area {
-  letter-spacing: 0.12em;
-}
+.problem.compact { font-size: 2.9rem; }
+.problem.tight { font-size: 2.2rem; }
 
 .problem .op { margin: 0 2px; }
 .problem .eq { color: var(--line-strong); margin: 0 2px; }
 
+/* 筆算（縦書き）問題表示（左ペイン上部・下に？は出さない） */
+.vertical-problem-box {
+  display: none;
+  position: relative;
+  z-index: 1;
+  user-select: none;
+  pointer-events: none;
+  font-family: var(--font-mono);
+  font-weight: 900;
+  color: var(--ink);
+}
+
+.card.is-vertical-layout .problem {
+  display: none;
+}
+
+.card.is-vertical-layout .vertical-problem-box {
+  display: block;
+}
+
+/* ＋, −, × の筆算テーブル */
+.v-std-grid {
+  display: inline-grid;
+  grid-template-columns: auto auto;
+  justify-items: end;
+  align-items: baseline;
+  font-size: 2.6rem;
+  line-height: 1.15;
+  letter-spacing: 0.18em;
+  padding: 4px 12px 6px;
+  border-bottom: 4px solid var(--ink);
+}
+
+.v-std-grid .v-num-a {
+  grid-column: 2;
+  grid-row: 1;
+}
+
+.v-std-grid .v-op {
+  grid-column: 1;
+  grid-row: 2;
+  padding-right: 10px;
+  letter-spacing: 0;
+}
+
+.v-std-grid .v-num-b {
+  grid-column: 2;
+  grid-row: 2;
+}
+
+/* =========================================================
+   ÷（わり算）の筆算表示（76÷3のような曲線払いの根号風記号）
+   ========================================================= */
+.v-div-grid {
+  display: inline-flex;
+  align-items: center;
+  font-size: 2.6rem;
+  line-height: 1.15;
+  margin-top: 28px; /* 上に商を書くための余白 */
+  padding: 4px 12px;
+}
+
+.v-div-divisor {
+  letter-spacing: 0.1em;
+  padding-right: 2px;
+  padding-top: 4px;
+}
+
+.v-div-bracket-wrap {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  border-top: 4px solid var(--ink);
+  padding: 4px 10px 2px 16px;
+  margin-left: 12px;
+}
+
+/* 平方根のような左下の曲線払いSVG */
+.v-div-curve-svg {
+  position: absolute;
+  left: -16px;
+  top: -4px;
+  width: 22px;
+  height: calc(100% + 10px);
+  overflow: visible;
+  pointer-events: none;
+}
+
+.v-div-dividend {
+  letter-spacing: 0.18em;
+}
+
+/* 答えの入力欄（通常時は式の右、筆算時は右カラム上部） */
 .answer-wrap {
   position: relative;
   display: inline-flex;
+  align-items: center;
+}
+
+.right-answer-header {
+  display: none;
+  width: 100%;
+  max-width: 360px;
+  background: rgba(255, 255, 255, 0.85);
+  border: 2px solid var(--line-strong);
+  border-radius: 14px;
+  padding: 10px 16px;
+  margin-bottom: 12px;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.card.is-vertical-layout .right-answer-header {
+  display: flex;
+}
+
+.right-answer-label {
+  font-size: 1rem;
+  font-weight: 900;
+  color: var(--muted);
+  white-space: nowrap;
 }
 
 .answer-area {
@@ -619,9 +780,20 @@ button {
   transition: all 0.12s ease;
 }
 
+.card.is-vertical-layout .answer-area {
+  font-size: 2.3rem;
+  font-weight: 900;
+  flex: 1;
+  min-width: 120px;
+  border: 2px solid var(--line-strong);
+  border-bottom-width: 4px;
+  border-radius: 10px;
+  padding: 6px 14px;
+}
+
 .answer-area.is-focused {
   border-color: var(--blue-pen);
-  box-shadow: 0 4px 12px rgba(26, 86, 142, 0.12);
+  box-shadow: 0 4px 12px rgba(26, 86, 142, 0.14);
 }
 
 .answer-slot {
@@ -668,6 +840,234 @@ button {
 @keyframes blink {
   0%, 45% { opacity: 1; }
   50%, 100% { opacity: 0; }
+}
+
+/* テンキー */
+.keypad {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 8px;
+  width: 100%;
+  max-width: 400px;
+  margin: 0 auto;
+  position: relative;
+  z-index: 3;
+}
+
+.card.is-vertical-layout .keypad {
+  max-width: 360px;
+}
+
+.keypad[hidden] {
+  display: none !important;
+}
+
+.key {
+  appearance: none;
+  height: 62px;
+  border: 2px solid var(--line-strong);
+  border-radius: 12px;
+  background: #fffaef;
+  color: var(--ink);
+  font-size: 1.8rem;
+  font-weight: 900;
+  cursor: pointer;
+  box-shadow: 0 4px 0 var(--line-strong);
+  transition: background 0.1s ease, transform 0.06s ease, box-shadow 0.06s ease;
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.key:hover:not(:disabled) {
+  background: #f4ecd6;
+  border-color: var(--ink);
+}
+
+.key:active:not(:disabled) {
+  transform: translateY(3px);
+  box-shadow: 0 1px 0 var(--line-strong);
+}
+
+.key-action {
+  font-size: 1.35rem;
+  background: #f9f2e2;
+}
+
+.key-zero {
+  grid-column: 1 / 3;
+}
+
+.key-submit {
+  grid-column: 3 / 5;
+  font-size: 1.05rem;
+  background: var(--blue-pen);
+  color: #fff;
+  border-color: #123e68;
+  box-shadow: 0 4px 0 #123e68;
+}
+
+.key-submit:hover:not(:disabled) {
+  background: #154878;
+}
+
+.key:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+  transform: none !important;
+  box-shadow: none;
+}
+
+/* =========================================================
+   筆算の途中計算・解答パネル（キーボードの位置に切り替わり表示）
+   ========================================================= */
+.vertical-solution-panel {
+  width: 100%;
+  max-width: 360px;
+  background: #ffffff;
+  border: 2.5px solid var(--blue-pen);
+  border-radius: 16px;
+  padding: 14px 16px 16px;
+  box-shadow: 0 6px 18px rgba(26, 86, 142, 0.12);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  animation: fadeIn 0.2s ease;
+}
+
+.vertical-solution-panel[hidden] {
+  display: none !important;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.v-sol-header {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 1.5px dashed var(--line-strong);
+  padding-bottom: 6px;
+  font-size: 0.88rem;
+  color: var(--blue-pen);
+  font-weight: 900;
+}
+
+.v-sol-body {
+  width: 100%;
+  display: flex;
+  justify-content: center;
+  overflow-x: auto;
+  padding: 6px 4px;
+}
+
+/* 筆算解答グリッド共通スタイル */
+.hissan-sol-table {
+  border-collapse: collapse;
+  font-family: var(--font-mono);
+  font-size: 1.45rem;
+  font-weight: 900;
+  line-height: 1.25;
+  color: var(--ink);
+}
+
+.hissan-sol-table td {
+  width: 1.45em;
+  height: 1.35em;
+  text-align: center;
+  vertical-align: middle;
+  padding: 0;
+  position: relative;
+}
+
+/* くりあがり・くりさがりの小さな補助数字 */
+.hissan-sol-table tr.carry-row td {
+  font-size: 0.8rem;
+  height: 1.2em;
+  color: var(--red-pen);
+  vertical-align: bottom;
+}
+
+/* 筆算の横線 */
+.hissan-sol-table tr.line-bottom td {
+  border-bottom: 3px solid var(--ink);
+}
+
+.hissan-sol-table tr.ans-row td {
+  color: var(--ok);
+  padding-top: 2px;
+}
+
+.hissan-sol-table tr.partial-row td {
+  color: var(--blue-pen);
+}
+
+/* くりさがりで斜線を引いた数字 */
+.crossed-digit {
+  position: relative;
+  color: #999;
+}
+.crossed-digit::after {
+  content: "";
+  position: absolute;
+  left: 15%;
+  right: 15%;
+  top: 48%;
+  border-top: 2.5px solid var(--red-pen);
+  transform: rotate(-25deg);
+}
+
+/* わり算筆算の解答セル装飾（曲線の根号風記号＆全桁横棒） */
+.hissan-sol-table td.div-curve-cell {
+  border-top: 3px solid var(--ink);
+  padding-left: 0.25em;
+}
+.hissan-sol-table td.div-top-bar {
+  border-top: 3px solid var(--ink);
+}
+.hissan-sol-table td.sub-line-bottom {
+  border-bottom: 2.5px solid var(--ink);
+}
+
+.sol-div-curve-svg {
+  position: absolute;
+  left: -0.42em;
+  top: -3px;
+  width: 0.65em;
+  height: calc(100% + 7px);
+  overflow: visible;
+  pointer-events: none;
+}
+
+.v-sol-note {
+  margin: 0;
+  font-size: 0.8rem;
+  color: var(--muted);
+  text-align: center;
+  line-height: 1.4;
+}
+
+.v-sol-next-btn {
+  appearance: none;
+  width: 100%;
+  padding: 10px 16px;
+  border-radius: 12px;
+  border: none;
+  background: var(--blue-pen);
+  color: #fff;
+  font-size: 1rem;
+  font-weight: 900;
+  cursor: pointer;
+  box-shadow: 0 4px 0 #123e68;
+  transition: transform 0.08s ease;
+}
+
+.v-sol-next-btn:active {
+  transform: translateY(2px);
+  box-shadow: 0 2px 0 #123e68;
 }
 
 /* 視覚モデル（10フレーム等）エリア */
@@ -750,7 +1150,7 @@ button {
 /* 花丸スタンプ演出 */
 .hanamaru-stamp {
   position: absolute;
-  top: 50%;
+  top: 45%;
   left: 50%;
   transform: translate(-50%, -50%) scale(0) rotate(-12deg);
   width: 120px;
@@ -780,75 +1180,6 @@ button {
   height: 1px;
   overflow: hidden;
   clip: rect(0 0 0 0);
-}
-
-/* テンキー */
-.keypad {
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 8px;
-  margin-top: 14px;
-  max-width: 420px;
-  margin-left: auto;
-  margin-right: auto;
-  position: relative;
-  z-index: 3;
-}
-
-.key {
-  appearance: none;
-  height: 64px;
-  border: 2px solid var(--line-strong);
-  border-radius: 12px;
-  background: #fffaef;
-  color: var(--ink);
-  font-size: 1.85rem;
-  font-weight: 900;
-  cursor: pointer;
-  box-shadow: 0 4px 0 var(--line-strong);
-  transition: background 0.1s ease, transform 0.06s ease, box-shadow 0.06s ease;
-  user-select: none;
-  -webkit-tap-highlight-color: transparent;
-}
-
-.key:hover:not(:disabled) {
-  background: #f4ecd6;
-  border-color: var(--ink);
-}
-
-.key:active:not(:disabled) {
-  transform: translateY(3px);
-  box-shadow: 0 1px 0 var(--line-strong);
-}
-
-.key-action {
-  font-size: 1.4rem;
-  background: #f9f2e2;
-}
-
-.key-zero {
-  grid-column: 1 / 3;
-}
-
-.key-submit {
-  grid-column: 3 / 5;
-  font-size: 1.1rem;
-  background: var(--blue-pen);
-  color: #fff;
-  border-color: #123e68;
-  box-shadow: 0 4px 0 #123e68;
-}
-
-.key-submit:hover:not(:disabled) {
-  background: #154878;
-  border-color: #0e3050;
-}
-
-.key:disabled {
-  opacity: 0.4;
-  cursor: not-allowed;
-  transform: none !important;
-  box-shadow: none;
 }
 
 /* リザルトモーダル（10問完了時） */
@@ -944,19 +1275,19 @@ button {
 
 @media (max-width: 440px) {
   .header h1 { font-size: 1.4rem; }
-  .problem { font-size: 2.9rem; }
-  .problem.compact { font-size: 2.4rem; }
-  .problem.tight { font-size: 1.85rem; }
-  .problem.vertical { font-size: 2.3rem; }
-  .key { height: 56px; font-size: 1.6rem; }
+  .problem { font-size: 2.8rem; }
+  .problem.compact { font-size: 2.3rem; }
+  .problem.tight { font-size: 1.8rem; }
+  .key { height: 54px; font-size: 1.55rem; }
   .stats { grid-template-columns: repeat(2, 1fr); }
+  .card.is-vertical-layout .workspace { min-height: 290px; }
 }
 </style>
 </head>
 <body>
   <div class="bg-pattern" aria-hidden="true"></div>
 
-  <div class="app">
+  <div class="app" id="appContainer">
     <!-- トップステータスバー -->
     <div class="top-bar">
       <div class="daily-badges">
@@ -1004,9 +1335,7 @@ button {
 
       <div class="control-row">
         <span class="control-label">ステップ</span>
-        <div class="chip-row" id="digitMenu" role="tablist">
-          <!-- JSで演算に応じたステップボタンを動的生成 -->
-        </div>
+        <div class="chip-row" id="digitMenu" role="tablist"></div>
       </div>
     </section>
 
@@ -1042,7 +1371,7 @@ button {
     </section>
 
     <!-- メイン学習カード -->
-    <main class="card">
+    <main class="card" id="mainCard">
       <!-- 花丸スタンプSVG -->
       <svg class="hanamaru-stamp" id="hanamaruStamp" viewBox="0 0 120 120" aria-hidden="true">
         <path d="M60 12 C70 2, 85 10, 88 22 C100 20, 112 32, 105 44 C118 52, 114 68, 102 74 C110 86, 98 100, 84 96 C80 110, 64 114, 56 102 C44 114, 28 106, 28 92 C14 94, 6 80, 16 68 C4 60, 8 44, 22 40 C16 26, 28 14, 42 20 C46 8, 54 6, 60 12 Z" fill="none" stroke="#d12e24" stroke-width="5" stroke-linejoin="round"/>
@@ -1057,8 +1386,9 @@ button {
           <button type="button" class="tool-btn" id="verticalToggleBtn">📐 筆算フォーム</button>
         </div>
         <div class="tool-group">
-          <button type="button" class="tool-btn" id="scratchToggleBtn">✏️ 手書きメモ</button>
-          <button type="button" class="tool-btn" id="scratchClearBtn" hidden>🧹 メモ消去</button>
+          <button type="button" class="tool-btn" id="scratchToggleBtn">✏️ ペン</button>
+          <button type="button" class="tool-btn" id="scratchEraserBtn" hidden>🧽 消しゴム</button>
+          <button type="button" class="tool-btn" id="scratchClearBtn" hidden>🧹 全消去</button>
         </div>
       </div>
 
@@ -1068,54 +1398,84 @@ button {
         <button type="button" id="nextProblemBtn" class="btn-next" hidden>次へ ⏎</button>
       </div>
 
-      <!-- 問題と手書きメモ領域 -->
-      <div class="workspace" id="workspace">
-        <canvas class="scratch-canvas" id="scratchCanvas"></canvas>
+      <!-- カード本体（通常時は1カラム、筆算時は左右2カラム） -->
+      <div class="card-body">
+        <!-- 左ペイン：問題表示 ＆ 手書き計算スペース -->
+        <div class="left-pane">
+          <div class="workspace" id="workspace">
+            <canvas class="scratch-canvas" id="scratchCanvas"></canvas>
 
-        <div class="problem" id="problem" aria-live="polite">
-          <span id="numA">0</span>
-          <span class="op" id="opSymbol">＋</span>
-          <span id="numB">0</span>
-          <span class="eq">＝</span>
-          <span class="answer-wrap">
-            <button type="button" class="answer-area" id="answerArea" aria-label="答えの入力欄">
-              <span class="answer-slot" id="answerDisplay">?</span>
-              <span class="caret" aria-hidden="true"></span>
-            </button>
-          </span>
+            <!-- 横書き問題（通常モード時） -->
+            <div class="problem" id="problem" aria-live="polite">
+              <span id="numA">0</span>
+              <span class="op" id="opSymbol">＋</span>
+              <span id="numB">0</span>
+              <span class="eq">＝</span>
+              <span class="answer-wrap" id="inlineAnswerSlot">
+                <button type="button" class="answer-area" id="answerArea" aria-label="答えの入力欄">
+                  <span class="answer-slot" id="answerDisplay">?</span>
+                  <span class="caret" aria-hidden="true"></span>
+                </button>
+              </span>
+            </div>
+
+            <!-- 縦書き筆算問題（筆算モード時：下に？は出さず手書き余白にする） -->
+            <div class="vertical-problem-box" id="verticalProblemBox" aria-live="polite"></div>
+
+            <span class="scratch-guide">✎ この下のスペースにそのまま手書きで筆算できます（消しゴムで部分消去も可）</span>
+          </div>
+
+          <!-- 10フレーム視覚モデル表示エリア -->
+          <div class="visual-aid" id="visualAid">
+            <div class="ten-frames-wrap" id="tenFramesContainer"></div>
+            <p class="visual-caption" id="visualCaption"></p>
+          </div>
+
+          <p class="hint-note" id="hintNote"></p>
+        </div>
+
+        <!-- 右ペイン：答えの入力欄（筆算時） ＆ テンキー / 筆算の途中計算解答 -->
+        <div class="right-pane">
+          <!-- 筆算モード時に右上に表示される答え入力欄 -->
+          <div class="right-answer-header" id="rightAnswerHeader">
+            <span class="right-answer-label">こたえ ＝</span>
+            <span id="rightAnswerSlot" style="display:flex; flex:1;"></span>
+          </div>
+
+          <!-- テンキー -->
+          <div class="keypad" id="keypad" aria-label="数字キー">
+            <button type="button" class="key" data-key="7">7</button>
+            <button type="button" class="key" data-key="8">8</button>
+            <button type="button" class="key" data-key="9">9</button>
+            <button type="button" class="key key-action" data-key="clear" aria-label="すべて消す">C</button>
+            
+            <button type="button" class="key" data-key="4">4</button>
+            <button type="button" class="key" data-key="5">5</button>
+            <button type="button" class="key" data-key="6">6</button>
+            <button type="button" class="key key-action" data-key="back" aria-label="1文字消す">⌫</button>
+            
+            <button type="button" class="key" data-key="1">1</button>
+            <button type="button" class="key" data-key="2">2</button>
+            <button type="button" class="key" data-key="3">3</button>
+            
+            <button type="button" class="key key-zero" data-key="0">0</button>
+            <button type="button" class="key key-submit" data-key="submit">答える ⏎</button>
+          </div>
+
+          <!-- 筆算の途中計算＆解答パネル（解答後にテンキーの位置に表示） -->
+          <div class="vertical-solution-panel" id="verticalSolutionPanel" hidden>
+            <div class="v-sol-header">
+              <span>📖 筆算の途中計算と答え</span>
+            </div>
+            <div class="v-sol-body" id="vSolBody"></div>
+            <p class="v-sol-note" id="vSolNote"></p>
+            <button type="button" class="v-sol-next-btn" id="vSolNextBtn">次の問題へ ⏎</button>
+          </div>
         </div>
       </div>
 
-      <!-- 10フレーム視覚モデル表示エリア -->
-      <div class="visual-aid" id="visualAid">
-        <div class="ten-frames-wrap" id="tenFramesContainer"></div>
-        <p class="visual-caption" id="visualCaption"></p>
-      </div>
-
-      <p class="hint-note" id="hintNote"></p>
-
       <div class="answer-field">
         <input type="text" id="answerInput" inputmode="none" autocomplete="off" aria-label="答え" maxlength="7">
-      </div>
-
-      <!-- テンキー -->
-      <div class="keypad" id="keypad" aria-label="数字キー">
-        <button type="button" class="key" data-key="7">7</button>
-        <button type="button" class="key" data-key="8">8</button>
-        <button type="button" class="key" data-key="9">9</button>
-        <button type="button" class="key key-action" data-key="clear" aria-label="すべて消す">C</button>
-        
-        <button type="button" class="key" data-key="4">4</button>
-        <button type="button" class="key" data-key="5">5</button>
-        <button type="button" class="key" data-key="6">6</button>
-        <button type="button" class="key key-action" data-key="back" aria-label="1文字消す">⌫</button>
-        
-        <button type="button" class="key" data-key="1">1</button>
-        <button type="button" class="key" data-key="2">2</button>
-        <button type="button" class="key" data-key="3">3</button>
-        
-        <button type="button" class="key key-zero" data-key="0">0</button>
-        <button type="button" class="key key-submit" data-key="submit">答える ⏎</button>
       </div>
     </main>
 
@@ -1152,8 +1512,8 @@ const OP_META = {
     steps: [
       { id: '1_no', label: '1けた(10まで)', digits: 1, hint: 'あわせていくつかな？' },
       { id: '1_carry', label: '1けた(10をこえる)', digits: 1, hint: '「あといくつで10になるか」を考えよう' },
-      { id: '2', label: '2けた', digits: 2, hint: '一の位と十の位に分けて考えよう' },
-      { id: '3', label: '3けた', digits: 3, hint: '筆算フォームや手書きメモも使えるよ' }
+      { id: '2', label: '2けた', digits: 2, hint: '一の位から順番に計算しよう' },
+      { id: '3', label: '3けた', digits: 3, hint: '筆算フォームで下のスペースに計算を書けるよ' }
     ]
   },
   sub: {
@@ -1162,28 +1522,28 @@ const OP_META = {
       { id: '1_no', label: '1けた(10まで)', digits: 1, hint: 'のこりはいくつかな？' },
       { id: '1_borrow', label: '10をこえるひき算', digits: 1, hint: '10のまとまりから引いてみよう' },
       { id: '2', label: '2けた', digits: 2, hint: 'くりさがりに気をつけよう' },
-      { id: '3', label: '3けた', digits: 3, hint: '位をそろえて計算しよう' }
+      { id: '3', label: '3けた', digits: 3, hint: '位をそろえて一の位から計算しよう' }
     ]
   },
   mul: {
     labelJa: 'かけ算', symbol: '×',
     steps: [
       { id: '1', label: '九九 (1けた×1けた)', digits: 1, hint: '九九を思い出そう' },
-      { id: '2_1', label: '2けた×1けた', digits: 2, hint: '十の位と一の位に分けてかけよう' },
-      { id: '2_2', label: '2けた×2けた', digits: 3, hint: '筆算フォームやメモを使って計算しよう' }
+      { id: '2_1', label: '2けた×1けた', digits: 2, hint: '一の位・十の位に順番にかけよう' },
+      { id: '2_2', label: '2けた×2けた', digits: 3, hint: '筆算フォームで部分積をメモしよう' }
     ]
   },
   div: {
     labelJa: 'わり算', symbol: '÷',
     steps: [
       { id: '1', label: '九九の範囲', digits: 1, hint: 'わる数の段の九九から探そう' },
-      { id: '2', label: '2けた÷1けた', digits: 2, hint: 'すべてわりきれる問題です' },
-      { id: '3', label: '3けた÷1〜2けた', digits: 3, hint: 'すべてわりきれる問題です' }
+      { id: '2', label: '2けた÷1けた', digits: 2, hint: '上の位から順番にわっていこう（わりきれます）' },
+      { id: '3', label: '3けた÷1〜2けた', digits: 3, hint: '「たてる→かける→ひく→おろす」の順に進めよう' }
     ]
   }
 };
 
-const STORAGE_KEY = 'math_notebook_v2_data';
+const STORAGE_KEY = 'math_notebook_v4_data';
 
 // 状態管理
 let currentOp = 'add';
@@ -1207,10 +1567,11 @@ let timerInterval = null;
 let elapsedSec = 0;
 let time10Progress = 0;
 
-// 表示オプション
+// 表示・手書きオプション
 let showVisualAid = false;
 let isVerticalMode = false;
 let isScratchActive = false;
+let scratchTool = 'pen'; // 'pen' | 'eraser'
 let soundEnabled = true;
 
 // 永続化データ
@@ -1219,13 +1580,18 @@ let userData = {
   dayStreak: 1,
   lastPlayedDate: null,
   bestTimes: {},
-  mistakes: [] // { op, a, b, stepId }
+  mistakes: []
 };
 
 // DOM要素
+const appContainer = document.getElementById('appContainer');
+const mainCard = document.getElementById('mainCard');
 const numAEl = document.getElementById('numA');
 const numBEl = document.getElementById('numB');
 const opSymbolEl = document.getElementById('opSymbol');
+const verticalProblemBox = document.getElementById('verticalProblemBox');
+const inlineAnswerSlot = document.getElementById('inlineAnswerSlot');
+const rightAnswerSlot = document.getElementById('rightAnswerSlot');
 const answerDisplay = document.getElementById('answerDisplay');
 const answerArea = document.getElementById('answerArea');
 const answerInput = document.getElementById('answerInput');
@@ -1239,6 +1605,10 @@ const opMenu = document.getElementById('opMenu');
 const digitMenu = document.getElementById('digitMenu');
 const gameModeMenu = document.getElementById('gameModeMenu');
 const keypad = document.getElementById('keypad');
+const verticalSolutionPanel = document.getElementById('verticalSolutionPanel');
+const vSolBody = document.getElementById('vSolBody');
+const vSolNote = document.getElementById('vSolNote');
+const vSolNextBtn = document.getElementById('vSolNextBtn');
 const correctCountEl = document.getElementById('correctCount');
 const wrongCountEl = document.getElementById('wrongCount');
 const streakCountEl = document.getElementById('streakCount');
@@ -1255,6 +1625,7 @@ const bestTimeText = document.getElementById('bestTimeText');
 const visualToggleBtn = document.getElementById('visualToggleBtn');
 const verticalToggleBtn = document.getElementById('verticalToggleBtn');
 const scratchToggleBtn = document.getElementById('scratchToggleBtn');
+const scratchEraserBtn = document.getElementById('scratchEraserBtn');
 const scratchClearBtn = document.getElementById('scratchClearBtn');
 const visualAid = document.getElementById('visualAid');
 const tenFramesContainer = document.getElementById('tenFramesContainer');
@@ -1270,7 +1641,7 @@ const newRecordBadge = document.getElementById('newRecordBadge');
 const modalCloseBtn = document.getElementById('modalCloseBtn');
 
 /**
- * Web Audio API サウンド合成（外部ファイル不要）
+ * Web Audio API サウンド合成
  */
 let audioCtx = null;
 function playTone(type) {
@@ -1345,7 +1716,6 @@ function loadUserData() {
     }
   } catch (e) {}
 
-  // 連続日数の計算
   const today = new Date().toISOString().slice(0, 10);
   if (userData.lastPlayedDate) {
     const last = new Date(userData.lastPlayedDate);
@@ -1390,7 +1760,6 @@ function randInt(min, max) {
 }
 
 function generateNumbers() {
-  // ニガテ復習モードかつストックがある場合
   if (gameMode === 'review' && userData.mistakes.length > 0) {
     const item = userData.mistakes[randInt(0, userData.mistakes.length - 1)];
     currentOp = item.op;
@@ -1411,11 +1780,11 @@ function generateNumbers() {
         newA = randInt(2, 9);
         newB = randInt(11 - newA, 9);
       } else if (currentStepId === '2') {
-        newA = randInt(11, 89);
-        newB = randInt(11, 99 - newA > 11 ? 89 : 45);
+        newA = randInt(12, 89);
+        newB = randInt(12, 89);
       } else {
-        newA = randInt(105, 899);
-        newB = randInt(105, 899);
+        newA = randInt(115, 899);
+        newB = randInt(115, 899);
       }
     } else if (currentOp === 'sub') {
       if (currentStepId === '1_no') {
@@ -1426,11 +1795,11 @@ function generateNumbers() {
         const minB = (newA - 10) + 1;
         newB = randInt(minB, 9);
       } else if (currentStepId === '2') {
-        newA = randInt(21, 98);
-        newB = randInt(11, newA - 5);
+        newA = randInt(22, 98);
+        newB = randInt(11, newA - 6);
       } else {
-        newA = randInt(201, 989);
-        newB = randInt(102, newA - 15);
+        newA = randInt(211, 989);
+        newB = randInt(105, newA - 25);
       }
     } else if (currentOp === 'mul') {
       if (currentStepId === '1') {
@@ -1440,22 +1809,21 @@ function generateNumbers() {
         newA = randInt(12, 98);
         newB = randInt(2, 9);
       } else {
-        newA = randInt(11, 49);
-        newB = randInt(11, 29);
+        newA = randInt(12, 69);
+        newB = randInt(12, 39);
       }
     } else if (currentOp === 'div') {
-      // 商と割る数を先に決めて掛け算で被除数を作る（素数トラップ回避）
       if (currentStepId === '1') {
         newB = randInt(2, 9);
         const q = randInt(2, 9);
         newA = newB * q;
       } else if (currentStepId === '2') {
-        newB = randInt(2, 9);
-        const q = randInt(11, Math.floor(99 / newB));
+        newB = randInt(2, 8);
+        const q = randInt(12, Math.floor(98 / newB));
         newA = newB * q;
       } else {
-        newB = randInt(3, 16);
-        const q = randInt(12, Math.floor(850 / newB));
+        newB = randInt(3, 18);
+        const q = randInt(12, Math.floor(890 / newB));
         newA = newB * q;
       }
     }
@@ -1477,6 +1845,298 @@ function getCorrectAnswer() {
     case 'div': return Math.floor(a / b);
     default: return 0;
   }
+}
+
+/**
+ * 筆算問題（左ペイン上部）の描画（76÷3の画像のような曲線払い記号）
+ */
+function renderVerticalProblem() {
+  if (currentOp === 'div') {
+    verticalProblemBox.innerHTML = `
+      <div class="v-div-grid" aria-label="${a} わる ${b}">
+        <span class="v-div-divisor">${b}</span>
+        <span class="v-div-bracket-wrap">
+          <svg class="v-div-curve-svg" viewBox="0 0 24 64" preserveAspectRatio="none" aria-hidden="true">
+            <path d="M 16 1.5 C 21 24, 15 49, 2 62" fill="none" stroke="var(--ink)" stroke-width="4" stroke-linecap="round"/>
+          </svg>
+          <span class="v-div-dividend">${a}</span>
+        </span>
+      </div>
+    `;
+  } else {
+    const sym = OP_META[currentOp].symbol;
+    verticalProblemBox.innerHTML = `
+      <div class="v-std-grid" aria-label="${a} ${sym} ${b}">
+        <span class="v-num-a">${a}</span>
+        <span class="v-op">${sym}</span>
+        <span class="v-num-b">${b}</span>
+      </div>
+    `;
+  }
+}
+
+/**
+ * 筆算の途中計算・解答HTML生成ロジック
+ */
+function buildGridTable(rows, rowClasses = [], cellDecorations = {}) {
+  let html = '<table class="hissan-sol-table" aria-label="筆算の途中計算">';
+  rows.forEach((r, rIdx) => {
+    const cls = rowClasses[rIdx] ? ` class="${rowClasses[rIdx]}"` : '';
+    html += `<tr${cls}>`;
+    r.forEach((cellVal, cIdx) => {
+      const key = `${rIdx}_${cIdx}`;
+      const tdCls = cellDecorations[key] ? ` class="${cellDecorations[key]}"` : '';
+      html += `<td${tdCls}>${cellVal !== undefined && cellVal !== null ? cellVal : ''}</td>`;
+    });
+    html += '</tr>';
+  });
+  html += '</table>';
+  return html;
+}
+
+function generateVerticalSolutionHTML(op, numA, numB) {
+  if (op === 'add') {
+    const ans = numA + numB;
+    const sA = String(numA), sB = String(numB), sAns = String(ans);
+    const maxLen = Math.max(sA.length, sB.length, sAns.length);
+    const cols = maxLen + 1;
+
+    const carries = Array(cols).fill('');
+    let c = 0;
+    for (let i = 0; i < maxLen; i++) {
+      const dA = i < sA.length ? Number(sA[sA.length - 1 - i]) : 0;
+      const dB = i < sB.length ? Number(sB[sB.length - 1 - i]) : 0;
+      const sum = dA + dB + c;
+      c = Math.floor(sum / 10);
+      if (c > 0 && (cols - 2 - i) >= 0) {
+        carries[cols - 2 - i] = `+${c}`;
+      }
+    }
+
+    const rowA = Array(cols).fill('');
+    for (let i = 0; i < sA.length; i++) rowA[cols - sA.length + i] = sA[i];
+
+    const rowB = Array(cols).fill('');
+    rowB[0] = '＋';
+    for (let i = 0; i < sB.length; i++) rowB[cols - sB.length + i] = sB[i];
+
+    const rowAns = Array(cols).fill('');
+    for (let i = 0; i < sAns.length; i++) rowAns[cols - sAns.length + i] = sAns[i];
+
+    const hasCarry = carries.some(v => v !== '');
+    const rows = hasCarry ? [carries, rowA, rowB, rowAns] : [rowA, rowB, rowAns];
+    const classes = hasCarry
+      ? ['carry-row', '', 'line-bottom', 'ans-row']
+      : ['', 'line-bottom', 'ans-row'];
+
+    return {
+      html: buildGridTable(rows, classes),
+      note: hasCarry ? '赤字はくりあがった数です。一の位から順に加えます。' : '位をそろえて一の位からたし算します。'
+    };
+  }
+
+  if (op === 'sub') {
+    const ans = numA - numB;
+    const sA = String(numA), sB = String(numB), sAns = String(ans);
+    const maxLen = Math.max(sA.length, sB.length, sAns.length);
+    const cols = maxLen + 1;
+
+    const digitsA = sA.split('').map(Number);
+    const origA = [...digitsA];
+    const lenA = digitsA.length;
+
+    for (let i = 0; i < lenA; i++) {
+      const idxA = lenA - 1 - i;
+      const idxB = sB.length - 1 - i;
+      const dB = idxB >= 0 ? Number(sB[idxB]) : 0;
+      if (digitsA[idxA] < dB) {
+        let j = idxA - 1;
+        while (j >= 0 && digitsA[j] === 0) {
+          digitsA[j] = 9;
+          j--;
+        }
+        if (j >= 0) digitsA[j] -= 1;
+        digitsA[idxA] += 10;
+      }
+    }
+
+    const borrowRow = Array(cols).fill('');
+    const rowA = Array(cols).fill('');
+    let hasBorrow = false;
+
+    for (let i = 0; i < lenA; i++) {
+      const colIdx = cols - lenA + i;
+      if (digitsA[i] !== origA[i]) {
+        hasBorrow = true;
+        borrowRow[colIdx] = digitsA[i];
+        rowA[colIdx] = `<span class="crossed-digit">${origA[i]}</span>`;
+      } else {
+        rowA[colIdx] = origA[i];
+      }
+    }
+
+    const rowB = Array(cols).fill('');
+    rowB[0] = '−';
+    for (let i = 0; i < sB.length; i++) rowB[cols - sB.length + i] = sB[i];
+
+    const rowAns = Array(cols).fill('');
+    for (let i = 0; i < sAns.length; i++) rowAns[cols - sAns.length + i] = sAns[i];
+
+    const rows = hasBorrow ? [borrowRow, rowA, rowB, rowAns] : [rowA, rowB, rowAns];
+    const classes = hasBorrow
+      ? ['carry-row', '', 'line-bottom', 'ans-row']
+      : ['', 'line-bottom', 'ans-row'];
+
+    return {
+      html: buildGridTable(rows, classes),
+      note: hasBorrow ? '引けないときは上の位から1くりさげて計算します。' : '位をそろえて一の位からひき算します。'
+    };
+  }
+
+  if (op === 'mul') {
+    const ans = numA * numB;
+    const sA = String(numA), sB = String(numB), sAns = String(ans);
+    const maxLen = Math.max(sA.length, sB.length, sAns.length);
+    const cols = maxLen + 1;
+
+    const rowA = Array(cols).fill('');
+    for (let i = 0; i < sA.length; i++) rowA[cols - sA.length + i] = sA[i];
+
+    const rowB = Array(cols).fill('');
+    rowB[0] = '×';
+    for (let i = 0; i < sB.length; i++) rowB[cols - sB.length + i] = sB[i];
+
+    const rows = [rowA, rowB];
+    const classes = ['', 'line-bottom'];
+
+    if (sB.length >= 2) {
+      for (let i = 0; i < sB.length; i++) {
+        const dB = Number(sB[sB.length - 1 - i]);
+        const partVal = numA * dB;
+        const sPart = String(partVal);
+        const rPart = Array(cols).fill('');
+        for (let k = 0; k < sPart.length; k++) {
+          const targetCol = cols - i - sPart.length + k;
+          if (targetCol >= 0) rPart[targetCol] = sPart[k];
+        }
+        rows.push(rPart);
+        classes.push(i === sB.length - 1 ? 'partial-row line-bottom' : 'partial-row');
+      }
+    }
+
+    const rowAns = Array(cols).fill('');
+    for (let i = 0; i < sAns.length; i++) rowAns[cols - sAns.length + i] = sAns[i];
+    rows.push(rowAns);
+    classes.push('ans-row');
+
+    const noteText = sB.length >= 2
+      ? `${numA}×${sB[sB.length - 1]}＝${numA * Number(sB[sB.length - 1])} と ${numA}×${sB[0]}0＝${numA * Number(sB[0]) * 10} をたし合わせます。`
+      : '下の数（かける数）を上のそれぞれの位に順番にかけます。';
+
+    return {
+      html: buildGridTable(rows, classes),
+      note: noteText
+    };
+  }
+
+  if (op === 'div') {
+    const q = Math.floor(numA / numB);
+    const sA = String(numA), sB = String(numB), sQ = String(q);
+    const divCols = sB.length;
+    const totalCols = divCols + sA.length;
+
+    const rows = [];
+    const classes = [];
+    const cellDecorations = {};
+
+    // 1行目：商（こたえ）
+    const rowQ = Array(totalCols).fill('');
+    for (let i = 0; i < sQ.length; i++) {
+      rowQ[totalCols - sQ.length + i] = sQ[i];
+    }
+    rows.push(rowQ);
+    classes.push('ans-row');
+
+    // 2行目：わる数 ＋ 曲線払いの筆算記号 ＋ わられる数
+    const rowProb = Array(totalCols).fill('');
+    for (let i = 0; i < sB.length; i++) rowProb[i] = sB[i];
+    const curveSvg = `<svg class="sol-div-curve-svg" viewBox="0 0 18 44" preserveAspectRatio="none" aria-hidden="true"><path d="M 12 1 C 16 17, 11 34, 1 43" fill="none" stroke="var(--ink)" stroke-width="3" stroke-linecap="round"/></svg>`;
+    for (let i = 0; i < sA.length; i++) {
+      const col = divCols + i;
+      rowProb[col] = (i === 0) ? `${curveSvg}${sA[i]}` : sA[i];
+      cellDecorations[`1_${col}`] = (i === 0) ? 'div-curve-cell' : 'div-top-bar';
+    }
+    rows.push(rowProb);
+    classes.push('');
+
+    // 長除法の各ステップ（すべての横棒を割られる数の全桁数分の長さに統一）
+    let currentRem = 0;
+    for (let i = 0; i < sA.length; i++) {
+      currentRem = currentRem * 10 + Number(sA[i]);
+      const stepQ = Math.floor(currentRem / numB);
+
+      if (stepQ > 0 || (i === sA.length - 1)) {
+        const prod = stepQ * numB;
+        const sProd = String(prod);
+        const rProd = Array(totalCols).fill('');
+        const endCol = divCols + i;
+        const startCol = endCol - sProd.length + 1;
+
+        for (let k = 0; k < sProd.length; k++) {
+          const c = startCol + k;
+          if (c >= 0) rProd[c] = sProd[k];
+        }
+
+        // 割られる数の全ケタ数分（divCols から totalCols - 1 まで）横棒を引く
+        const prodRowIdx = rows.length;
+        for (let c = divCols; c < totalCols; c++) {
+          cellDecorations[`${prodRowIdx}_${c}`] = 'sub-line-bottom';
+        }
+        rows.push(rProd);
+        classes.push('partial-row');
+
+        currentRem = currentRem - prod;
+
+        // 次の桁をおろす、または最後の余り0を表示
+        if (i < sA.length - 1) {
+          const nextDigit = sA[i + 1];
+          const nextValStr = (currentRem > 0 ? String(currentRem) : '') + nextDigit;
+          const rNext = Array(totalCols).fill('');
+          const nextEndCol = divCols + i + 1;
+          for (let k = 0; k < nextValStr.length; k++) {
+            rNext[nextEndCol - nextValStr.length + 1 + k] = nextValStr[k];
+          }
+          rows.push(rNext);
+          classes.push('');
+        } else {
+          const rZero = Array(totalCols).fill('');
+          rZero[endCol] = String(currentRem);
+          rows.push(rZero);
+          classes.push('');
+        }
+      }
+    }
+
+    return {
+      html: buildGridTable(rows, classes, cellDecorations),
+      note: '上の位から「商をたてる → かける → ひく → 次の位をおろす」の順に進めます。'
+    };
+  }
+
+  return { html: '', note: '' };
+}
+
+function showVerticalSolutionPanel() {
+  const sol = generateVerticalSolutionHTML(currentOp, a, b);
+  vSolBody.innerHTML = sol.html;
+  vSolNote.textContent = sol.note;
+  keypad.hidden = true;
+  verticalSolutionPanel.hidden = false;
+}
+
+function hideVerticalSolutionPanel() {
+  verticalSolutionPanel.hidden = true;
+  keypad.hidden = false;
 }
 
 /**
@@ -1518,7 +2178,6 @@ function renderVisualAid() {
       } else if (currentOp === 'sub') {
         if (idx < a) {
           const dot = document.createElement('div');
-          // 後ろからb個にバツ印をつける
           if (idx >= a - b) {
             dot.className = 'tf-dot sub-crossed';
           } else {
@@ -1576,6 +2235,17 @@ function renderStepChips() {
   });
 }
 
+function syncScratchUI() {
+  scratchCanvas.classList.toggle('active', isScratchActive);
+  scratchCanvas.classList.toggle('is-eraser', isScratchActive && scratchTool === 'eraser');
+
+  scratchToggleBtn.classList.toggle('active', isScratchActive && scratchTool === 'pen');
+  scratchEraserBtn.classList.toggle('eraser-active', isScratchActive && scratchTool === 'eraser');
+
+  scratchEraserBtn.hidden = !isScratchActive;
+  scratchClearBtn.hidden = !isScratchActive;
+}
+
 function applyModeUI() {
   renderStepChips();
   const meta = OP_META[currentOp];
@@ -1590,17 +2260,23 @@ function applyModeUI() {
   opSymbolEl.textContent = meta.symbol;
   hintNote.textContent = stepObj.hint || '';
 
-  // 筆算フォームはわり算以外で利用可能
-  verticalToggleBtn.disabled = (currentOp === 'div');
-  if (currentOp === 'div' && isVerticalMode) {
-    isVerticalMode = false;
-    verticalToggleBtn.classList.remove('active');
-  }
+  verticalToggleBtn.disabled = false;
+  verticalToggleBtn.classList.toggle('active', isVerticalMode);
+  mainCard.classList.toggle('is-vertical-layout', isVerticalMode);
+  appContainer.classList.toggle('is-vertical-app', isVerticalMode);
 
-  problemEl.classList.remove('compact', 'tight', 'vertical');
   if (isVerticalMode) {
-    problemEl.classList.add('vertical');
+    // 筆算モード時は必ず手書きメモをONにし、答え入力欄を右カラムへ移動
+    isScratchActive = true;
+    if (!rightAnswerSlot.contains(answerArea)) {
+      rightAnswerSlot.appendChild(answerArea);
+    }
+    renderVerticalProblem();
   } else {
+    if (!inlineAnswerSlot.contains(answerArea)) {
+      inlineAnswerSlot.appendChild(answerArea);
+    }
+    problemEl.classList.remove('compact', 'tight');
     if (stepObj.digits === 2 || currentOp === 'mul' || currentOp === 'div') {
       problemEl.classList.add('compact');
     }
@@ -1608,6 +2284,8 @@ function applyModeUI() {
       problemEl.classList.add('tight');
     }
   }
+
+  syncScratchUI();
 
   opMenu.querySelectorAll('.chip').forEach(btn => {
     btn.classList.toggle('active', btn.dataset.op === currentOp);
@@ -1617,13 +2295,14 @@ function applyModeUI() {
     btn.classList.toggle('active', btn.dataset.mode === gameMode);
   });
 
-  // 10問アタック用プログレスバー表示
   if (gameMode === 'time10') {
     progressWrap.classList.add('active');
     updateProgressUI();
   } else {
     progressWrap.classList.remove('active');
   }
+
+  setTimeout(resizeCanvas, 50);
 }
 
 function updateProgressUI() {
@@ -1724,7 +2403,11 @@ function newProblem() {
   }
 
   hanamaruStamp.classList.remove('show');
+  hideVerticalSolutionPanel();
   clearScratchPad();
+  // 新しい問題ではペンモードに戻す
+  scratchTool = 'pen';
+  syncScratchUI();
 
   if (gameMode === 'review' && userData.mistakes.length === 0) {
     feedbackEl.className = 'feedback ok';
@@ -1738,16 +2421,19 @@ function newProblem() {
 
   numAEl.textContent = a;
   numBEl.textContent = b;
+  renderVerticalProblem();
   clearAnswer();
   answerArea.classList.remove('is-ok', 'is-ng');
 
   feedbackTextEl.textContent = '';
   feedbackEl.className = 'feedback empty';
   nextProblemBtn.hidden = true;
+  nextProblemBtn.classList.remove('ok-next');
 
   locked = false;
   setKeypadEnabled(true);
   renderVisualAid();
+  setTimeout(resizeCanvas, 30);
   focusAnswerInput();
 
   if (gameMode === 'time10' && time10Progress === 0 && elapsedSec === 0) {
@@ -1784,7 +2470,6 @@ function submitAnswer() {
     streak += 1;
     userData.totalSolved += 1;
 
-    // 復習モードで正解したらニガテリストから削除
     if (gameMode === 'review') {
       userData.mistakes = userData.mistakes.filter(
         m => !(m.op === currentOp && m.a === a && m.b === b)
@@ -1804,19 +2489,26 @@ function submitAnswer() {
       updateProgressUI();
       if (time10Progress >= 10) {
         stopStopwatch();
-        setTimeout(showTimeAttackResult, 550);
+        if (isVerticalMode) showVerticalSolutionPanel();
+        setTimeout(showTimeAttackResult, 650);
         updateScoreboard();
         return;
       }
     }
 
-    problemTimer = setTimeout(newProblem, 650);
+    if (isVerticalMode) {
+      showVerticalSolutionPanel();
+      nextProblemBtn.hidden = false;
+      nextProblemBtn.classList.add('ok-next');
+      setTimeout(() => vSolNextBtn.focus(), 50);
+    } else {
+      problemTimer = setTimeout(newProblem, 650);
+    }
   } else {
     playTone('ng');
     wrongCount += 1;
     streak = 0;
 
-    // ニガテリストに登録（重複防止）
     const exists = userData.mistakes.some(
       m => m.op === currentOp && m.a === a && m.b === b
     );
@@ -1829,16 +2521,20 @@ function submitAnswer() {
     feedbackEl.className = 'feedback ng';
     feedbackTextEl.textContent = `おしい！ 正解は ${ans}`;
     nextProblemBtn.hidden = false;
+    nextProblemBtn.classList.remove('ok-next');
     answerArea.classList.add('is-ng');
 
-    // 不正解時は自動で視覚ヒントを表示（対応範囲内の場合）
-    if ((currentOp === 'add' || currentOp === 'sub') && a <= 20 && b <= 20 && (a + b) <= 20) {
-      showVisualAid = true;
-      visualToggleBtn.classList.add('active');
-      renderVisualAid();
+    if (isVerticalMode) {
+      showVerticalSolutionPanel();
+      setTimeout(() => vSolNextBtn.focus(), 50);
+    } else {
+      if ((currentOp === 'add' || currentOp === 'sub') && a <= 20 && b <= 20 && (a + b) <= 20) {
+        showVisualAid = true;
+        visualToggleBtn.classList.add('active');
+        renderVisualAid();
+      }
+      setTimeout(() => nextProblemBtn.focus(), 50);
     }
-
-    setTimeout(() => nextProblemBtn.focus(), 50);
   }
 
   updateScoreboard();
@@ -1878,21 +2574,40 @@ modalCloseBtn.addEventListener('click', () => {
 });
 
 /**
- * 手書きメモ（Scratchpad）機能
+ * 手書きメモ（ペン ＆ 部分消しゴム対応）
  */
 const ctx = scratchCanvas.getContext('2d');
 let drawing = false;
 
 function resizeCanvas() {
   const rect = workspace.getBoundingClientRect();
-  scratchCanvas.width = rect.width;
-  scratchCanvas.height = rect.height;
+  if (rect.width === 0 || rect.height === 0) return;
+  if (scratchCanvas.width === Math.floor(rect.width) && scratchCanvas.height === Math.floor(rect.height)) return;
+
+  const tempCanvas = document.createElement('canvas');
+  tempCanvas.width = scratchCanvas.width;
+  tempCanvas.height = scratchCanvas.height;
+  if (tempCanvas.width > 0 && tempCanvas.height > 0) {
+    tempCanvas.getContext('2d').drawImage(scratchCanvas, 0, 0);
+  }
+
+  scratchCanvas.width = Math.floor(rect.width);
+  scratchCanvas.height = Math.floor(rect.height);
+  if (tempCanvas.width > 0 && tempCanvas.height > 0) {
+    ctx.save();
+    ctx.globalCompositeOperation = 'source-over';
+    ctx.drawImage(tempCanvas, 0, 0);
+    ctx.restore();
+  }
 }
 
 window.addEventListener('resize', resizeCanvas);
 
 function clearScratchPad() {
+  ctx.save();
+  ctx.globalCompositeOperation = 'source-over';
   ctx.clearRect(0, 0, scratchCanvas.width, scratchCanvas.height);
+  ctx.restore();
 }
 
 function getPos(e) {
@@ -1905,12 +2620,25 @@ function getPos(e) {
 scratchCanvas.addEventListener('pointerdown', (e) => {
   if (!isScratchActive) return;
   drawing = true;
+  scratchCanvas.setPointerCapture(e.pointerId);
   const pos = getPos(e);
   ctx.beginPath();
   ctx.moveTo(pos.x, pos.y);
-  ctx.strokeStyle = 'rgba(26, 86, 142, 0.65)';
-  ctx.lineWidth = 3;
   ctx.lineCap = 'round';
+  ctx.lineJoin = 'round';
+
+  if (scratchTool === 'eraser') {
+    // 描いた線だけを部分的に透明化して消す
+    ctx.globalCompositeOperation = 'destination-out';
+    ctx.lineWidth = 24;
+  } else {
+    ctx.globalCompositeOperation = 'source-over';
+    ctx.strokeStyle = 'rgba(26, 86, 142, 0.78)';
+    ctx.lineWidth = 3;
+  }
+  // ワンタップでも点・消去が効くように微小描画
+  ctx.lineTo(pos.x + 0.1, pos.y + 0.1);
+  ctx.stroke();
 });
 
 scratchCanvas.addEventListener('pointermove', (e) => {
@@ -1921,7 +2649,10 @@ scratchCanvas.addEventListener('pointermove', (e) => {
 });
 
 window.addEventListener('pointerup', () => {
-  drawing = false;
+  if (drawing) {
+    drawing = false;
+    ctx.globalCompositeOperation = 'source-over';
+  }
 });
 
 /**
@@ -1961,22 +2692,46 @@ visualToggleBtn.addEventListener('click', () => {
 
 verticalToggleBtn.addEventListener('click', () => {
   isVerticalMode = !isVerticalMode;
-  verticalToggleBtn.classList.toggle('active', isVerticalMode);
+  if (isVerticalMode) {
+    isScratchActive = true;
+    scratchTool = 'pen';
+  }
   applyModeUI();
-  setTimeout(resizeCanvas, 50);
+  if (locked) {
+    if (isVerticalMode) showVerticalSolutionPanel();
+    else hideVerticalSolutionPanel();
+  }
   focusAnswerInput();
 });
 
 scratchToggleBtn.addEventListener('click', () => {
-  isScratchActive = !isScratchActive;
-  scratchToggleBtn.classList.toggle('active', isScratchActive);
-  scratchCanvas.classList.toggle('active', isScratchActive);
-  scratchClearBtn.hidden = !isScratchActive;
+  if (isVerticalMode) {
+    // 筆算モード時は手書き常時ONのため、ペンへの切り替えとして動作
+    scratchTool = 'pen';
+  } else {
+    if (!isScratchActive) {
+      isScratchActive = true;
+      scratchTool = 'pen';
+    } else if (scratchTool === 'eraser') {
+      scratchTool = 'pen';
+    } else {
+      isScratchActive = false;
+    }
+  }
+  syncScratchUI();
   resizeCanvas();
+});
+
+scratchEraserBtn.addEventListener('click', () => {
+  if (!isScratchActive) return;
+  scratchTool = (scratchTool === 'eraser') ? 'pen' : 'eraser';
+  syncScratchUI();
 });
 
 scratchClearBtn.addEventListener('click', () => {
   clearScratchPad();
+  scratchTool = 'pen';
+  syncScratchUI();
   focusAnswerInput();
 });
 
@@ -1998,6 +2753,7 @@ keypad.addEventListener('click', (e) => {
 });
 
 nextProblemBtn.addEventListener('click', newProblem);
+vSolNextBtn.addEventListener('click', newProblem);
 
 resetBtn.addEventListener('click', () => {
   correctCount = 0;
@@ -2016,7 +2772,7 @@ document.addEventListener('keydown', (e) => {
     return;
   }
   if (locked) {
-    if (e.key === 'Enter' && !nextProblemBtn.hidden) {
+    if (e.key === 'Enter' && (!nextProblemBtn.hidden || !verticalSolutionPanel.hidden)) {
       e.preventDefault();
       newProblem();
     }
