@@ -1505,7 +1505,7 @@ button {
       </div>
     </main>
 
-    <p class="footer-note">✎ キーボードの数字キー・Enterキー、または画面のボタンで答えられます</p>
+    <p class="footer-note">✎ キーボードの数字キー・Enterキー、または画面のボタンで答えられます（空欄でEnterを押すとスキップ）</p>
   </div>
 
   <!-- 10問タイムアタック結果モーダル -->
@@ -2390,7 +2390,7 @@ function applyModeUI() {
     progressWrap.classList.remove('active');
   }
 
-  setTimeout(resizeCanvas, 50);
+  setTimeout(resizeCanvas, 300);
 }
 
 function updateProgressUI() {
@@ -2524,7 +2524,7 @@ function newProblem() {
   locked = false;
   setKeypadEnabled(true);
   renderVisualAid();
-  setTimeout(resizeCanvas, 30);
+  setTimeout(resizeCanvas, 300);
   focusAnswerInput();
 
   if (gameMode === 'time10' && time10Progress === 0 && elapsedSec === 0) {
@@ -2715,9 +2715,14 @@ function getPos(e) {
   const rect = scratchCanvas.getBoundingClientRect();
   const clientX = e.touches ? e.touches[0].clientX : e.clientX;
   const clientY = e.touches ? e.touches[0].clientY : e.clientY;
-  return { x: clientX - rect.left, y: clientY - rect.top };
+  // ★内部解像度と表示サイズのズレを自動計算して補正する
+  const scaleX = scratchCanvas.width / rect.width;
+  const scaleY = scratchCanvas.height / rect.height;
+  return { 
+    x: (clientX - rect.left) * scaleX, 
+    y: (clientY - rect.top) * scaleY 
+  };
 }
-
 scratchCanvas.addEventListener('pointerdown', (e) => {
   if (!isScratchActive) return;
   drawing = true;
