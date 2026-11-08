@@ -2,103 +2,1103 @@
 <html lang="ja">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<meta name="description" content="四則演算 練習サイト - たし算・ひき算・かけ算・わり算。1〜3けた対応。">
-<title>四則演算 練習サイト</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="description" content="四則演算 練習サイト - 視覚モデル・筆算・タイムアタック対応のインタラクティブ算数ドリル">
+<title>四則演算 ステップアップ練習ノート</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Zen+Maru+Gothic:wght@700;900&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="css/style.css">
+<link href="https://fonts.googleapis.com/css2?family=Zen+Maru+Gothic:wght@500;700;900&display=swap" rel="stylesheet">
+
+<style>
+:root {
+  /* 紙・ノートカラー */
+  --paper: #fffdf7;
+  --paper-edge: #f4ecd6;
+  --grid: rgba(47, 111, 168, 0.09);
+  --margin-red: rgba(216, 52, 42, 0.25);
+  --line: #e6dac0;
+  --line-strong: #d2c095;
+
+  /* テキスト */
+  --ink: #1e242b;
+  --muted: #5a626a;
+
+  /* アクセントカラー */
+  --blue-pen: #1a568e;
+  --blue-soft: #eaf2f8;
+  --red-pen: #d12e24;
+  --ok: #237645;
+  --ok-soft: #e6f4ec;
+  --ng: #c8241a;
+  --ng-soft: #fbeae7;
+  --gold: #b87c14;
+  --gold-soft: #fcf3df;
+  --purple: #6b3fa0;
+  --purple-soft: #f2ebf9;
+
+  --shadow: 0 2px 4px rgba(17, 17, 17, 0.04), 0 12px 28px rgba(17, 17, 17, 0.07);
+  --radius: 16px;
+  --font-ui: "Zen Maru Gothic", -apple-system, BlinkMacSystemFont, sans-serif;
+}
+
+*, *::before, *::after {
+  box-sizing: border-box;
+}
+
+html, body {
+  margin: 0;
+  padding: 0;
+  min-height: 100%;
+  background: var(--paper);
+  color: var(--ink);
+  font-family: var(--font-ui);
+  font-weight: 700;
+  -webkit-font-smoothing: antialiased;
+  overflow-x: hidden;
+  touch-action: manipulation;
+}
+
+body {
+  padding: 16px 12px 48px;
+}
+
+/* ノート方眼背景 */
+.bg-pattern {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  background-image:
+    linear-gradient(to right, transparent 36px, var(--margin-red) 36px, var(--margin-red) 38px, transparent 38px),
+    linear-gradient(to right, var(--grid) 1px, transparent 1px),
+    linear-gradient(to bottom, var(--grid) 1px, transparent 1px);
+  background-size: 100% 100%, 24px 24px, 24px 24px;
+  background-repeat: no-repeat, repeat, repeat;
+}
+
+@media (max-width: 600px) {
+  .bg-pattern {
+    background-image:
+      linear-gradient(to right, var(--grid) 1px, transparent 1px),
+      linear-gradient(to bottom, var(--grid) 1px, transparent 1px);
+    background-size: 20px 20px, 20px 20px;
+  }
+}
+
+button {
+  font-family: inherit;
+}
+
+.app {
+  position: relative;
+  z-index: 1;
+  width: 100%;
+  max-width: 580px;
+  margin: 0 auto;
+}
+
+/* ヘッダー・ステータスバー */
+.top-bar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 10px;
+  padding: 6px 12px;
+  background: rgba(255, 255, 255, 0.85);
+  border: 1.5px solid var(--line);
+  border-radius: 999px;
+  font-size: 0.8rem;
+  backdrop-filter: blur(4px);
+}
+
+.daily-badges {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.badge-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--ink);
+}
+
+.badge-val {
+  font-weight: 900;
+  color: var(--blue-pen);
+}
+
+.top-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.icon-btn {
+  appearance: none;
+  border: 1.5px solid var(--line-strong);
+  background: #fff;
+  color: var(--ink);
+  border-radius: 999px;
+  padding: 4px 10px;
+  font-size: 0.78rem;
+  font-weight: 700;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  transition: all 0.15s ease;
+}
+
+.icon-btn:hover {
+  border-color: var(--blue-pen);
+  background: var(--blue-soft);
+}
+
+.icon-btn.active {
+  background: var(--blue-pen);
+  color: #fff;
+  border-color: var(--blue-pen);
+}
+
+/* タイトルヘッダー */
+.header {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 14px;
+}
+
+.header h1 {
+  margin: 0;
+  font-size: 1.65rem;
+  font-weight: 900;
+  letter-spacing: 0.01em;
+  line-height: 1.2;
+  color: var(--ink);
+  position: relative;
+  display: inline-block;
+}
+
+.title-underline {
+  display: block;
+  width: 100%;
+  height: 8px;
+  margin-top: -1px;
+}
+
+.title-underline path {
+  fill: none;
+  stroke: var(--red-pen);
+  stroke-width: 3.5;
+  stroke-linecap: round;
+}
+
+.sub {
+  margin: 2px 0 0;
+  font-size: 0.92rem;
+  color: var(--muted);
+}
+
+/* コントロールパネル */
+.controls {
+  display: grid;
+  gap: 10px;
+  margin-bottom: 12px;
+  background: rgba(255, 255, 255, 0.7);
+  border: 1.5px solid var(--line);
+  border-radius: var(--radius);
+  padding: 12px 14px;
+}
+
+.control-row {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.control-label {
+  font-size: 0.78rem;
+  font-weight: 900;
+  color: var(--muted);
+  min-width: 52px;
+}
+
+.chip-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  flex: 1;
+}
+
+.chip {
+  appearance: none;
+  border: 1.5px solid var(--line-strong);
+  background: #fffaef;
+  color: var(--muted);
+  border-radius: 8px;
+  padding: 5px 11px;
+  font-size: 0.85rem;
+  font-weight: 900;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  white-space: nowrap;
+}
+
+.chip:hover:not(:disabled) {
+  border-color: var(--blue-pen);
+  color: var(--ink);
+}
+
+#opMenu .chip.active {
+  background: var(--blue-pen);
+  border-color: var(--blue-pen);
+  color: #fff;
+  box-shadow: 0 2px 6px rgba(26, 86, 142, 0.25);
+}
+
+#digitMenu .chip {
+  border-radius: 999px;
+  font-size: 0.82rem;
+}
+
+#digitMenu .chip.active {
+  background: var(--gold);
+  border-color: var(--gold);
+  color: #fff;
+  box-shadow: 0 2px 6px rgba(184, 124, 20, 0.25);
+}
+
+#gameModeMenu .chip {
+  font-size: 0.82rem;
+  background: #fff;
+}
+
+#gameModeMenu .chip.active {
+  background: var(--ok);
+  border-color: var(--ok);
+  color: #fff;
+}
+
+#gameModeMenu .chip[data-mode="review"].active {
+  background: var(--purple);
+  border-color: var(--purple);
+}
+
+.badge-count {
+  display: inline-block;
+  background: var(--ng);
+  color: #fff;
+  font-size: 0.7rem;
+  padding: 1px 6px;
+  border-radius: 999px;
+  margin-left: 4px;
+  vertical-align: middle;
+}
+
+/* スコアボード＆タイマー */
+.stats {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.stat {
+  background: #fffdf9;
+  border: 2px dashed var(--line-strong);
+  border-radius: 12px;
+  padding: 6px 4px;
+  text-align: center;
+}
+
+.stat-ok { border-color: rgba(35, 118, 69, 0.4); }
+.stat-ng { border-color: rgba(200, 36, 26, 0.35); }
+.stat-streak { border-color: rgba(184, 124, 20, 0.45); }
+.stat-timer { border-color: rgba(26, 86, 142, 0.4); }
+
+.stat-label {
+  display: block;
+  font-size: 0.72rem;
+  color: var(--muted);
+  margin-bottom: 2px;
+}
+
+.stat-value {
+  font-size: 1.35rem;
+  font-weight: 900;
+  font-variant-numeric: tabular-nums;
+  line-height: 1.1;
+}
+
+.stat-value.ok { color: var(--ok); }
+.stat-value.ng { color: var(--ng); }
+.stat-value.streak { color: var(--gold); }
+.stat-value.timer { color: var(--blue-pen); font-size: 1.2rem; }
+
+/* プログレスバー（10問モード用） */
+.progress-wrap {
+  margin-bottom: 12px;
+  display: none;
+}
+
+.progress-wrap.active {
+  display: block;
+}
+
+.progress-header {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.8rem;
+  color: var(--muted);
+  margin-bottom: 4px;
+}
+
+.progress-bar {
+  height: 10px;
+  background: var(--line);
+  border-radius: 999px;
+  overflow: hidden;
+}
+
+.progress-fill {
+  height: 100%;
+  width: 0%;
+  background: linear-gradient(90deg, var(--blue-pen), var(--ok));
+  border-radius: 999px;
+  transition: width 0.25s ease;
+}
+
+/* メインカード */
+.card {
+  position: relative;
+  background: #fdf6e4;
+  border: 2px solid var(--line);
+  border-radius: 20px;
+  padding: 18px 18px 20px;
+  box-shadow: var(--shadow);
+  overflow: hidden;
+}
+
+/* カード内ツールバー（ヒント・筆算・手書きメモ切替） */
+.card-tools {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 10px;
+  position: relative;
+  z-index: 3;
+}
+
+.tool-group {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.tool-btn {
+  appearance: none;
+  border: 1.5px solid var(--line-strong);
+  background: rgba(255, 255, 255, 0.85);
+  color: var(--muted);
+  border-radius: 8px;
+  padding: 4px 10px;
+  font-size: 0.78rem;
+  font-weight: 700;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  transition: all 0.15s ease;
+}
+
+.tool-btn:hover:not(:disabled) {
+  border-color: var(--blue-pen);
+  color: var(--ink);
+}
+
+.tool-btn.active {
+  background: var(--blue-soft);
+  border-color: var(--blue-pen);
+  color: var(--blue-pen);
+}
+
+.tool-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+/* フィードバック欄 */
+.feedback {
+  min-height: 48px;
+  margin-bottom: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 10px;
+  text-align: center;
+  font-size: 1.05rem;
+  font-weight: 900;
+  border-radius: 10px;
+  padding: 8px 14px;
+  position: relative;
+  z-index: 3;
+  transition: all 0.2s ease;
+}
+
+.feedback.ok {
+  color: var(--ok);
+  background: var(--ok-soft);
+  font-size: 1.25rem;
+}
+
+.feedback.ng {
+  color: var(--ng);
+  background: var(--ng-soft);
+  font-size: 1.2rem;
+}
+
+.feedback.empty {
+  background: transparent;
+  min-height: 36px;
+}
+
+.btn-next {
+  appearance: none;
+  font-size: 0.9rem;
+  font-weight: 900;
+  color: #fff;
+  background: var(--ng);
+  border: none;
+  border-radius: 999px;
+  padding: 5px 16px;
+  cursor: pointer;
+  box-shadow: 0 3px 0 #8f1912;
+}
+
+.btn-next:active {
+  transform: translateY(2px);
+  box-shadow: 0 1px 0 #8f1912;
+}
+
+/* 問題表示エリア & 手書きキャンバスラッパー */
+.workspace {
+  position: relative;
+  min-height: 110px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 8px 0;
+}
+
+.scratch-canvas {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 2;
+  pointer-events: none;
+  touch-action: none;
+}
+
+.scratch-canvas.active {
+  pointer-events: auto;
+  cursor: crosshair;
+  background: rgba(255, 255, 255, 0.25);
+  border: 1.5px dashed var(--blue-pen);
+  border-radius: 12px;
+}
+
+/* 横書き問題表示 */
+.problem {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: center;
+  gap: 6px 6px;
+  font-size: 3.6rem;
+  font-weight: 900;
+  line-height: 1.2;
+  color: var(--ink);
+  user-select: none;
+  position: relative;
+  z-index: 1;
+}
+
+.problem.compact { font-size: 3rem; }
+.problem.tight { font-size: 2.3rem; }
+
+/* 筆算（縦書き）モード */
+.problem.vertical {
+  display: inline-grid;
+  grid-template-columns: auto auto;
+  justify-items: end;
+  align-items: baseline;
+  gap: 2px 12px;
+  font-size: 2.8rem;
+  font-variant-numeric: tabular-nums;
+  padding: 8px 24px;
+  background: rgba(255, 255, 255, 0.55);
+  border-radius: 12px;
+}
+
+.problem.vertical #numA {
+  grid-column: 2;
+  letter-spacing: 0.12em;
+    padding-right: 12px; /* ★追加: 回答枠の余白と合わせる */
+
+}
+
+.problem.vertical #opSymbol {
+  grid-column: 1;
+  grid-row: 2;
+  margin: 0;
+}
+
+.problem.vertical #numB {
+  grid-column: 2;
+  grid-row: 2;
+  letter-spacing: 0.12em;
+    padding-right: 12px; /* ★追加: 回答枠の余白と合わせる */
+
+}
+
+.problem.vertical .eq {
+  display: none;
+}
+
+.problem.vertical .answer-wrap {
+  grid-column: 1 / 3;
+  grid-row: 3;
+  width: 100%;
+  justify-content: flex-end;
+  border-top: 3.5px solid var(--ink);
+  padding-top: 6px;
+  margin-top: 4px;
+}
+
+/* ★新規追加: 回答枠の中の数字も間隔(桁幅)を合わせる */
+.problem.vertical .answer-area {
+  letter-spacing: 0.12em;
+}
+
+.problem .op { margin: 0 2px; }
+.problem .eq { color: var(--line-strong); margin: 0 2px; }
+
+.answer-wrap {
+  position: relative;
+  display: inline-flex;
+}
+
+.answer-area {
+  appearance: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  min-width: 1.8em;
+  min-height: 1.25em;
+  padding: 2px 12px 4px;
+  border: none;
+  border-bottom: 4px solid var(--line-strong);
+  border-radius: 8px 8px 0 0;
+  background: #ffffff;
+  color: var(--ink);
+  font: inherit;
+  line-height: 1;
+  cursor: text;
+  transition: all 0.12s ease;
+}
+
+.answer-area.is-focused {
+  border-color: var(--blue-pen);
+  box-shadow: 0 4px 12px rgba(26, 86, 142, 0.12);
+}
+
+.answer-slot {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 0.8em;
+  color: #999;
+}
+
+.answer-area.is-focused .answer-slot,
+.answer-slot.filled {
+  color: var(--ink);
+}
+
+.answer-area.is-ok {
+  background: var(--ok-soft);
+  color: var(--ok);
+  border-color: var(--ok);
+}
+.answer-area.is-ok .answer-slot { color: var(--ok); }
+
+.answer-area.is-ng {
+  background: var(--ng-soft);
+  color: var(--ng);
+  border-color: var(--ng);
+}
+.answer-area.is-ng .answer-slot { color: var(--ng); }
+
+.caret {
+  display: none;
+  width: 3.5px;
+  height: 0.9em;
+  margin-left: 2px;
+  border-radius: 2px;
+  background: var(--blue-pen);
+}
+
+.answer-area.is-focused .caret {
+  display: inline-block;
+  animation: blink 1s steps(1) infinite;
+}
+
+@keyframes blink {
+  0%, 45% { opacity: 1; }
+  50%, 100% { opacity: 0; }
+}
+
+/* 視覚モデル（10フレーム等）エリア */
+.visual-aid {
+  margin-top: 10px;
+  padding: 12px;
+  background: rgba(255, 255, 255, 0.85);
+  border: 1.5px dashed var(--line-strong);
+  border-radius: 12px;
+  display: none;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  position: relative;
+  z-index: 1;
+}
+
+.visual-aid.active {
+  display: flex;
+}
+
+.ten-frames-wrap {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 12px;
+}
+
+.ten-frame {
+  display: grid;
+  grid-template-columns: repeat(5, 22px);
+  grid-template-rows: repeat(2, 22px);
+  gap: 4px;
+  padding: 6px;
+  background: #fff;
+  border: 2px solid var(--ink);
+  border-radius: 6px;
+}
+
+.tf-cell {
+  width: 22px;
+  height: 22px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.tf-dot {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+}
+
+.tf-dot.num-a { background: var(--blue-pen); }
+.tf-dot.num-b { background: var(--gold); }
+.tf-dot.sub-crossed {
+  background: var(--blue-pen);
+  opacity: 0.25;
+  position: relative;
+}
+.tf-dot.sub-crossed::after {
+  content: "✕";
+  position: absolute;
+  inset: -3px 0 0 0;
+  color: var(--ng);
+  font-size: 14px;
+  font-weight: 900;
+  text-align: center;
+}
+
+.visual-caption {
+  font-size: 0.82rem;
+  color: var(--muted);
+  text-align: center;
+  margin: 0;
+}
+
+/* 花丸スタンプ演出 */
+.hanamaru-stamp {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%) scale(0) rotate(-12deg);
+  width: 120px;
+  height: 120px;
+  pointer-events: none;
+  z-index: 10;
+  opacity: 0;
+  transition: transform 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275), opacity 0.2s ease;
+}
+
+.hanamaru-stamp.show {
+  transform: translate(-50%, -50%) scale(1) rotate(-12deg);
+  opacity: 0.85;
+}
+
+.hint-note {
+  margin: 6px 0 0;
+  min-height: 1.3em;
+  text-align: center;
+  font-size: 0.84rem;
+  color: var(--muted);
+}
+
+.answer-field {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+}
+
+/* テンキー */
+.keypad {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 8px;
+  margin-top: 14px;
+  max-width: 420px;
+  margin-left: auto;
+  margin-right: auto;
+  position: relative;
+  z-index: 3;
+}
+
+.key {
+  appearance: none;
+  height: 64px;
+  border: 2px solid var(--line-strong);
+  border-radius: 12px;
+  background: #fffaef;
+  color: var(--ink);
+  font-size: 1.85rem;
+  font-weight: 900;
+  cursor: pointer;
+  box-shadow: 0 4px 0 var(--line-strong);
+  transition: background 0.1s ease, transform 0.06s ease, box-shadow 0.06s ease;
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.key:hover:not(:disabled) {
+  background: #f4ecd6;
+  border-color: var(--ink);
+}
+
+.key:active:not(:disabled) {
+  transform: translateY(3px);
+  box-shadow: 0 1px 0 var(--line-strong);
+}
+
+.key-action {
+  font-size: 1.4rem;
+  background: #f9f2e2;
+}
+
+.key-zero {
+  grid-column: 1 / 3;
+}
+
+.key-submit {
+  grid-column: 3 / 5;
+  font-size: 1.1rem;
+  background: var(--blue-pen);
+  color: #fff;
+  border-color: #123e68;
+  box-shadow: 0 4px 0 #123e68;
+}
+
+.key-submit:hover:not(:disabled) {
+  background: #154878;
+  border-color: #0e3050;
+}
+
+.key:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+  transform: none !important;
+  box-shadow: none;
+}
+
+/* リザルトモーダル（10問完了時） */
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(17, 17, 17, 0.55);
+  z-index: 50;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  backdrop-filter: blur(3px);
+}
+
+.modal-overlay.show {
+  display: flex;
+}
+
+.modal-card {
+  background: var(--paper);
+  border: 3px solid var(--line-strong);
+  border-radius: 22px;
+  padding: 24px 20px;
+  max-width: 400px;
+  width: 100%;
+  text-align: center;
+  box-shadow: 0 20px 40px rgba(0,0,0,0.2);
+}
+
+.modal-title {
+  margin: 0 0 8px;
+  font-size: 1.6rem;
+  color: var(--blue-pen);
+}
+
+.modal-score-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 10px;
+  margin: 16px 0;
+}
+
+.modal-stat {
+  background: #fff;
+  border: 1.5px solid var(--line);
+  border-radius: 12px;
+  padding: 10px;
+}
+
+.modal-stat-label {
+  font-size: 0.78rem;
+  color: var(--muted);
+  display: block;
+}
+
+.modal-stat-val {
+  font-size: 1.5rem;
+  font-weight: 900;
+  color: var(--ink);
+}
+
+.new-record-badge {
+  display: inline-block;
+  background: var(--gold);
+  color: #fff;
+  font-size: 0.78rem;
+  padding: 2px 10px;
+  border-radius: 999px;
+  margin-bottom: 10px;
+}
+
+.modal-btn {
+  appearance: none;
+  width: 100%;
+  padding: 12px;
+  background: var(--blue-pen);
+  color: #fff;
+  border: none;
+  border-radius: 12px;
+  font-size: 1.05rem;
+  font-weight: 900;
+  cursor: pointer;
+  box-shadow: 0 4px 0 #123e68;
+}
+
+.footer-note {
+  margin: 14px 0 0;
+  text-align: center;
+  font-size: 0.8rem;
+  color: var(--muted);
+}
+
+@media (max-width: 440px) {
+  .header h1 { font-size: 1.4rem; }
+  .problem { font-size: 2.9rem; }
+  .problem.compact { font-size: 2.4rem; }
+  .problem.tight { font-size: 1.85rem; }
+  .problem.vertical { font-size: 2.3rem; }
+  .key { height: 56px; font-size: 1.6rem; }
+  .stats { grid-template-columns: repeat(2, 1fr); }
+}
+</style>
 </head>
 <body>
   <div class="bg-pattern" aria-hidden="true"></div>
 
   <div class="app">
+    <!-- トップステータスバー -->
+    <div class="top-bar">
+      <div class="daily-badges">
+        <span class="badge-item" title="連続学習日数">🔥 連続 <span class="badge-val" id="dayStreakEl">1</span>日</span>
+        <span class="badge-item" title="これまでの累計正解数">🏅 累計 <span class="badge-val" id="totalSolvedEl">0</span>問</span>
+      </div>
+      <div class="top-actions">
+        <button type="button" id="soundToggleBtn" class="icon-btn active" title="効果音のON/OFF">🔊 音 ON</button>
+        <button type="button" id="resetBtn" class="icon-btn" title="現在のスコアをリセット">↺ リセット</button>
+      </div>
+    </div>
+
     <header class="header">
       <div class="header-text">
         <h1>
-          四則演算 練習サイト
-          <svg class="title-underline" viewBox="0 0 220 18" aria-hidden="true">
-            <path d="M4 10 C 40 2, 70 16, 110 8 C 150 1, 180 15, 216 6" />
+          四則演算 練習ノート
+          <svg class="title-underline" viewBox="0 0 220 12" aria-hidden="true">
+            <path d="M4 8 C 50 2, 90 11, 140 5 C 175 2, 200 9, 216 4" />
           </svg>
         </h1>
-        <p class="sub" id="subTitle">1けたのたし算</p>
+        <p class="sub" id="subTitle">1けたのたし算（10まで）</p>
       </div>
-      <button type="button" id="resetBtn" class="btn-ghost" title="スコアをリセット">
-        <span class="btn-ghost-icon">✕</span>リセット
-      </button>
     </header>
 
+    <!-- モード＆ステップ選択 -->
     <section class="controls" aria-label="練習メニュー">
-      <div class="control-group">
-        <span class="control-label">演算</span>
-        <div class="chip-row" id="opMenu" role="tablist">
-          <button type="button" class="chip active" data-op="add" role="tab" aria-selected="true">たし算</button>
-          <button type="button" class="chip" data-op="sub" role="tab" aria-selected="false">ひき算</button>
-          <button type="button" class="chip" data-op="mul" role="tab" aria-selected="false">かけ算</button>
-          <button type="button" class="chip" data-op="div" role="tab" aria-selected="false">わり算</button>
+      <div class="control-row">
+        <span class="control-label">モード</span>
+        <div class="chip-row" id="gameModeMenu" role="tablist">
+          <button type="button" class="chip active" data-mode="free">エンドレス練習</button>
+          <button type="button" class="chip" data-mode="time10">⏱ 10問アタック</button>
+          <button type="button" class="chip" data-mode="review" id="reviewModeBtn">💪 ニガテ復習 <span class="badge-count" id="mistakeBadge" hidden>0</span></button>
         </div>
       </div>
-      <div class="control-group">
-        <span class="control-label">けた数</span>
+
+      <div class="control-row">
+        <span class="control-label">けいさん</span>
+        <div class="chip-row" id="opMenu" role="tablist">
+          <button type="button" class="chip active" data-op="add">＋ たし算</button>
+          <button type="button" class="chip" data-op="sub">− ひき算</button>
+          <button type="button" class="chip" data-op="mul">× かけ算</button>
+          <button type="button" class="chip" data-op="div">÷ わり算</button>
+        </div>
+      </div>
+
+      <div class="control-row">
+        <span class="control-label">ステップ</span>
         <div class="chip-row" id="digitMenu" role="tablist">
-          <button type="button" class="chip active" data-digits="1" role="tab" aria-selected="true">1けた</button>
-          <button type="button" class="chip" data-digits="2" role="tab" aria-selected="false">2けた</button>
-          <button type="button" class="chip" data-digits="3" role="tab" aria-selected="false" id="digit3Btn">3けた</button>
+          <!-- JSで演算に応じたステップボタンを動的生成 -->
         </div>
       </div>
     </section>
 
+    <!-- 10問アタック用プログレスバー -->
+    <div class="progress-wrap" id="progressWrap">
+      <div class="progress-header">
+        <span id="progressText">1 / 10 問目</span>
+        <span id="bestTimeText">ベスト: --.-秒</span>
+      </div>
+      <div class="progress-bar">
+        <div class="progress-fill" id="progressFill"></div>
+      </div>
+    </div>
+
+    <!-- スコアボード -->
     <section class="stats" aria-label="スコア">
       <div class="stat stat-ok">
         <span class="stat-label">正解</span>
         <span class="stat-value ok" id="correctCount">0</span>
       </div>
       <div class="stat stat-ng">
-        <span class="stat-label">不正解</span>
+        <span class="stat-label">ミス</span>
         <span class="stat-value ng" id="wrongCount">0</span>
       </div>
       <div class="stat stat-streak">
-        <span class="stat-label">連続</span>
+        <span class="stat-label">連続正解</span>
         <span class="stat-value streak" id="streakCount">0</span>
+      </div>
+      <div class="stat stat-timer">
+        <span class="stat-label">タイム</span>
+        <span class="stat-value timer" id="timerDisplay">0.0s</span>
       </div>
     </section>
 
+    <!-- メイン学習カード -->
     <main class="card">
-      
+      <!-- 花丸スタンプSVG -->
+      <svg class="hanamaru-stamp" id="hanamaruStamp" viewBox="0 0 120 120" aria-hidden="true">
+        <path d="M60 12 C70 2, 85 10, 88 22 C100 20, 112 32, 105 44 C118 52, 114 68, 102 74 C110 86, 98 100, 84 96 C80 110, 64 114, 56 102 C44 114, 28 106, 28 92 C14 94, 6 80, 16 68 C4 60, 8 44, 22 40 C16 26, 28 14, 42 20 C46 8, 54 6, 60 12 Z" fill="none" stroke="#d12e24" stroke-width="5" stroke-linejoin="round"/>
+        <circle cx="60" cy="60" r="28" fill="none" stroke="#d12e24" stroke-width="4.5"/>
+        <path d="M48 56 Q60 36 72 56 T60 76" fill="none" stroke="#d12e24" stroke-width="4" stroke-linecap="round"/>
+      </svg>
+
+      <!-- 補助ツールボタン -->
+      <div class="card-tools">
+        <div class="tool-group">
+          <button type="button" class="tool-btn" id="visualToggleBtn">🟢 10のまとまり図</button>
+          <button type="button" class="tool-btn" id="verticalToggleBtn">📐 筆算フォーム</button>
+        </div>
+        <div class="tool-group">
+          <button type="button" class="tool-btn" id="scratchToggleBtn">✏️ 手書きメモ</button>
+          <button type="button" class="tool-btn" id="scratchClearBtn" hidden>🧹 メモ消去</button>
+        </div>
+      </div>
+
+      <!-- 正誤フィードバック -->
       <div class="feedback empty" id="feedback" aria-live="polite">
         <span id="feedbackText"></span>
         <button type="button" id="nextProblemBtn" class="btn-next" hidden>次へ ⏎</button>
       </div>
 
-      <div class="problem" id="problem" aria-live="polite">
-        <span id="numA">0</span>
-        <span class="op" id="opSymbol">＋</span>
-        <span id="numB">0</span>
-        <span class="eq">＝</span>
-        <span class="answer-wrap">
-          <button type="button" class="answer-area" id="answerArea" aria-label="答えの入力欄">
-            <span class="answer-slot" id="answerDisplay">?</span>
-            <span class="caret" aria-hidden="true"></span>
-          </button>
-        </span>
+      <!-- 問題と手書きメモ領域 -->
+      <div class="workspace" id="workspace">
+        <canvas class="scratch-canvas" id="scratchCanvas"></canvas>
+
+        <div class="problem" id="problem" aria-live="polite">
+          <span id="numA">0</span>
+          <span class="op" id="opSymbol">＋</span>
+          <span id="numB">0</span>
+          <span class="eq">＝</span>
+          <span class="answer-wrap">
+            <button type="button" class="answer-area" id="answerArea" aria-label="答えの入力欄">
+              <span class="answer-slot" id="answerDisplay">?</span>
+              <span class="caret" aria-hidden="true"></span>
+            </button>
+          </span>
+        </div>
       </div>
 
-      <p class="input-hint" id="inputHint"></p>
+      <!-- 10フレーム視覚モデル表示エリア -->
+      <div class="visual-aid" id="visualAid">
+        <div class="ten-frames-wrap" id="tenFramesContainer"></div>
+        <p class="visual-caption" id="visualCaption"></p>
+      </div>
+
       <p class="hint-note" id="hintNote"></p>
 
       <div class="answer-field">
-        <input
-          type="text"
-          id="answerInput"
-          inputmode="none"
-          pattern="[0-9]*"
-          autocomplete="off"
-          aria-label="答え"
-          maxlength="7"
-        >
+        <input type="text" id="answerInput" inputmode="none" autocomplete="off" aria-label="答え" maxlength="7">
       </div>
 
+      <!-- テンキー -->
       <div class="keypad" id="keypad" aria-label="数字キー">
         <button type="button" class="key" data-key="7">7</button>
         <button type="button" class="key" data-key="8">8</button>
@@ -115,14 +1115,936 @@
         <button type="button" class="key" data-key="3">3</button>
         
         <button type="button" class="key key-zero" data-key="0">0</button>
-        <button type="button" class="key key-submit" data-key="submit">答える</button>
+        <button type="button" class="key key-submit" data-key="submit">答える ⏎</button>
       </div>
-
     </main>
 
-    <p class="footer-note">✎ テンキーとキーボード、どちらでも答えられます</p>
+    <p class="footer-note">✎ キーボードの数字キー・Enterキー、または画面のボタンで答えられます</p>
   </div>
 
-<script src="js/app.js"></script>
+  <!-- 10問タイムアタック結果モーダル -->
+  <div class="modal-overlay" id="resultModal">
+    <div class="modal-card">
+      <div id="newRecordBadge" class="new-record-badge" hidden>🎉 自己ベスト更新！</div>
+      <h2 class="modal-title">10問クリア！</h2>
+      <p id="modalSubText" style="margin:0; color:var(--muted); font-size:0.9rem;"></p>
+      <div class="modal-score-grid">
+        <div class="modal-stat">
+          <span class="modal-stat-label">クリアタイム</span>
+          <span class="modal-stat-val" id="modalTimeVal">0.0秒</span>
+        </div>
+        <div class="modal-stat">
+          <span class="modal-stat-label">せいかい率</span>
+          <span class="modal-stat-val" id="modalAccVal">100%</span>
+        </div>
+      </div>
+      <button type="button" class="modal-btn" id="modalCloseBtn">もういちど挑戦する</button>
+    </div>
+  </div>
+
+<script>
+/**
+ * ステップ定義とメタデータ
+ */
+const OP_META = {
+  add: {
+    labelJa: 'たし算', symbol: '＋',
+    steps: [
+      { id: '1_no', label: '1けた(10まで)', digits: 1, hint: 'あわせていくつかな？' },
+      { id: '1_carry', label: '1けた(10をこえる)', digits: 1, hint: '「あといくつで10になるか」を考えよう' },
+      { id: '2', label: '2けた', digits: 2, hint: '一の位と十の位に分けて考えよう' },
+      { id: '3', label: '3けた', digits: 3, hint: '筆算フォームや手書きメモも使えるよ' }
+    ]
+  },
+  sub: {
+    labelJa: 'ひき算', symbol: '−',
+    steps: [
+      { id: '1_no', label: '1けた(10まで)', digits: 1, hint: 'のこりはいくつかな？' },
+      { id: '1_borrow', label: '10をこえるひき算', digits: 1, hint: '10のまとまりから引いてみよう' },
+      { id: '2', label: '2けた', digits: 2, hint: 'くりさがりに気をつけよう' },
+      { id: '3', label: '3けた', digits: 3, hint: '位をそろえて計算しよう' }
+    ]
+  },
+  mul: {
+    labelJa: 'かけ算', symbol: '×',
+    steps: [
+      { id: '1', label: '九九 (1けた×1けた)', digits: 1, hint: '九九を思い出そう' },
+      { id: '2_1', label: '2けた×1けた', digits: 2, hint: '十の位と一の位に分けてかけよう' },
+      { id: '2_2', label: '2けた×2けた', digits: 3, hint: '筆算フォームやメモを使って計算しよう' }
+    ]
+  },
+  div: {
+    labelJa: 'わり算', symbol: '÷',
+    steps: [
+      { id: '1', label: '九九の範囲', digits: 1, hint: 'わる数の段の九九から探そう' },
+      { id: '2', label: '2けた÷1けた', digits: 2, hint: 'すべてわりきれる問題です' },
+      { id: '3', label: '3けた÷1〜2けた', digits: 3, hint: 'すべてわりきれる問題です' }
+    ]
+  }
+};
+
+const STORAGE_KEY = 'math_notebook_v2_data';
+
+// 状態管理
+let currentOp = 'add';
+let currentStepId = '1_no';
+let gameMode = 'free'; // 'free' | 'time10' | 'review'
+let a = 0;
+let b = 0;
+let lastA = null;
+let lastB = null;
+let answerBuffer = '';
+
+let correctCount = 0;
+let wrongCount = 0;
+let streak = 0;
+let locked = false;
+let problemTimer = null;
+
+// タイム計測
+let startTime = 0;
+let timerInterval = null;
+let elapsedSec = 0;
+let time10Progress = 0;
+
+// 表示オプション
+let showVisualAid = false;
+let isVerticalMode = false;
+let isScratchActive = false;
+let soundEnabled = true;
+
+// 永続化データ
+let userData = {
+  totalSolved: 0,
+  dayStreak: 1,
+  lastPlayedDate: null,
+  bestTimes: {},
+  mistakes: [] // { op, a, b, stepId }
+};
+
+// DOM要素
+const numAEl = document.getElementById('numA');
+const numBEl = document.getElementById('numB');
+const opSymbolEl = document.getElementById('opSymbol');
+const answerDisplay = document.getElementById('answerDisplay');
+const answerArea = document.getElementById('answerArea');
+const answerInput = document.getElementById('answerInput');
+const feedbackEl = document.getElementById('feedback');
+const feedbackTextEl = document.getElementById('feedbackText');
+const nextProblemBtn = document.getElementById('nextProblemBtn');
+const problemEl = document.getElementById('problem');
+const hintNote = document.getElementById('hintNote');
+const subTitle = document.getElementById('subTitle');
+const opMenu = document.getElementById('opMenu');
+const digitMenu = document.getElementById('digitMenu');
+const gameModeMenu = document.getElementById('gameModeMenu');
+const keypad = document.getElementById('keypad');
+const correctCountEl = document.getElementById('correctCount');
+const wrongCountEl = document.getElementById('wrongCount');
+const streakCountEl = document.getElementById('streakCount');
+const timerDisplayEl = document.getElementById('timerDisplay');
+const resetBtn = document.getElementById('resetBtn');
+const soundToggleBtn = document.getElementById('soundToggleBtn');
+const dayStreakEl = document.getElementById('dayStreakEl');
+const totalSolvedEl = document.getElementById('totalSolvedEl');
+const mistakeBadge = document.getElementById('mistakeBadge');
+const progressWrap = document.getElementById('progressWrap');
+const progressText = document.getElementById('progressText');
+const progressFill = document.getElementById('progressFill');
+const bestTimeText = document.getElementById('bestTimeText');
+const visualToggleBtn = document.getElementById('visualToggleBtn');
+const verticalToggleBtn = document.getElementById('verticalToggleBtn');
+const scratchToggleBtn = document.getElementById('scratchToggleBtn');
+const scratchClearBtn = document.getElementById('scratchClearBtn');
+const visualAid = document.getElementById('visualAid');
+const tenFramesContainer = document.getElementById('tenFramesContainer');
+const visualCaption = document.getElementById('visualCaption');
+const hanamaruStamp = document.getElementById('hanamaruStamp');
+const scratchCanvas = document.getElementById('scratchCanvas');
+const workspace = document.getElementById('workspace');
+const resultModal = document.getElementById('resultModal');
+const modalTimeVal = document.getElementById('modalTimeVal');
+const modalAccVal = document.getElementById('modalAccVal');
+const modalSubText = document.getElementById('modalSubText');
+const newRecordBadge = document.getElementById('newRecordBadge');
+const modalCloseBtn = document.getElementById('modalCloseBtn');
+
+/**
+ * Web Audio API サウンド合成（外部ファイル不要）
+ */
+let audioCtx = null;
+function playTone(type) {
+  if (!soundEnabled) return;
+  try {
+    if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    if (audioCtx.state === 'suspended') audioCtx.resume();
+    const now = audioCtx.currentTime;
+
+    if (type === 'tap') {
+      const osc = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(520, now);
+      gain.gain.setValueAtTime(0.05, now);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.04);
+      osc.connect(gain);
+      gain.connect(audioCtx.destination);
+      osc.start(now);
+      osc.stop(now + 0.04);
+    } else if (type === 'ok') {
+      [523.25, 659.25, 783.99].forEach((freq, idx) => {
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.type = 'triangle';
+        osc.frequency.setValueAtTime(freq, now + idx * 0.07);
+        gain.gain.setValueAtTime(0.12, now + idx * 0.07);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + idx * 0.07 + 0.22);
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+        osc.start(now + idx * 0.07);
+        osc.stop(now + idx * 0.07 + 0.22);
+      });
+    } else if (type === 'ng') {
+      const osc = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
+      osc.type = 'sawtooth';
+      osc.frequency.setValueAtTime(190, now);
+      osc.frequency.linearRampToValueAtTime(140, now + 0.22);
+      gain.gain.setValueAtTime(0.08, now);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.25);
+      osc.connect(gain);
+      gain.connect(audioCtx.destination);
+      osc.start(now);
+      osc.stop(now + 0.25);
+    } else if (type === 'fanfare') {
+      [523.25, 659.25, 783.99, 1046.5].forEach((freq, idx) => {
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.type = 'triangle';
+        osc.frequency.setValueAtTime(freq, now + idx * 0.09);
+        gain.gain.setValueAtTime(0.15, now + idx * 0.09);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + idx * 0.09 + 0.35);
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+        osc.start(now + idx * 0.09);
+        osc.stop(now + idx * 0.09 + 0.35);
+      });
+    }
+  } catch (e) {}
+}
+
+/**
+ * データの読み込み・保存
+ */
+function loadUserData() {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      userData = { ...userData, ...parsed };
+    }
+  } catch (e) {}
+
+  // 連続日数の計算
+  const today = new Date().toISOString().slice(0, 10);
+  if (userData.lastPlayedDate) {
+    const last = new Date(userData.lastPlayedDate);
+    const curr = new Date(today);
+    const diffDays = Math.round((curr - last) / (1000 * 60 * 60 * 24));
+    if (diffDays === 1) {
+      userData.dayStreak += 1;
+    } else if (diffDays > 1) {
+      userData.dayStreak = 1;
+    }
+  } else {
+    userData.dayStreak = 1;
+  }
+  userData.lastPlayedDate = today;
+  saveUserData();
+  syncHeaderBadges();
+}
+
+function saveUserData() {
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(userData));
+  } catch (e) {}
+}
+
+function syncHeaderBadges() {
+  dayStreakEl.textContent = userData.dayStreak;
+  totalSolvedEl.textContent = userData.totalSolved;
+  const mCount = userData.mistakes.length;
+  if (mCount > 0) {
+    mistakeBadge.hidden = false;
+    mistakeBadge.textContent = mCount;
+  } else {
+    mistakeBadge.hidden = true;
+  }
+}
+
+/**
+ * 乱数・問題生成ロジック
+ */
+function randInt(min, max) {
+  return Math.floor(Math.random() * (max - min + 1)) + min;
+}
+
+function generateNumbers() {
+  // ニガテ復習モードかつストックがある場合
+  if (gameMode === 'review' && userData.mistakes.length > 0) {
+    const item = userData.mistakes[randInt(0, userData.mistakes.length - 1)];
+    currentOp = item.op;
+    currentStepId = item.stepId;
+    a = item.a;
+    b = item.b;
+    return;
+  }
+
+  let newA = 0, newB = 0;
+
+  for (let i = 0; i < 200; i++) {
+    if (currentOp === 'add') {
+      if (currentStepId === '1_no') {
+        newA = randInt(1, 8);
+        newB = randInt(1, 10 - newA);
+      } else if (currentStepId === '1_carry') {
+        newA = randInt(2, 9);
+        newB = randInt(11 - newA, 9);
+      } else if (currentStepId === '2') {
+        newA = randInt(11, 89);
+        newB = randInt(11, 99 - newA > 11 ? 89 : 45);
+      } else {
+        newA = randInt(105, 899);
+        newB = randInt(105, 899);
+      }
+    } else if (currentOp === 'sub') {
+      if (currentStepId === '1_no') {
+        newA = randInt(2, 10);
+        newB = randInt(1, newA - 1);
+      } else if (currentStepId === '1_borrow') {
+        newA = randInt(11, 18);
+        const minB = (newA - 10) + 1;
+        newB = randInt(minB, 9);
+      } else if (currentStepId === '2') {
+        newA = randInt(21, 98);
+        newB = randInt(11, newA - 5);
+      } else {
+        newA = randInt(201, 989);
+        newB = randInt(102, newA - 15);
+      }
+    } else if (currentOp === 'mul') {
+      if (currentStepId === '1') {
+        newA = randInt(2, 9);
+        newB = randInt(2, 9);
+      } else if (currentStepId === '2_1') {
+        newA = randInt(12, 98);
+        newB = randInt(2, 9);
+      } else {
+        newA = randInt(11, 49);
+        newB = randInt(11, 29);
+      }
+    } else if (currentOp === 'div') {
+      // 商と割る数を先に決めて掛け算で被除数を作る（素数トラップ回避）
+      if (currentStepId === '1') {
+        newB = randInt(2, 9);
+        const q = randInt(2, 9);
+        newA = newB * q;
+      } else if (currentStepId === '2') {
+        newB = randInt(2, 9);
+        const q = randInt(11, Math.floor(99 / newB));
+        newA = newB * q;
+      } else {
+        newB = randInt(3, 16);
+        const q = randInt(12, Math.floor(850 / newB));
+        newA = newB * q;
+      }
+    }
+
+    if (newA !== lastA || newB !== lastB) break;
+  }
+
+  a = newA;
+  b = newB;
+  lastA = a;
+  lastB = b;
+}
+
+function getCorrectAnswer() {
+  switch (currentOp) {
+    case 'add': return a + b;
+    case 'sub': return a - b;
+    case 'mul': return a * b;
+    case 'div': return Math.floor(a / b);
+    default: return 0;
+  }
+}
+
+/**
+ * 10フレーム（視覚モデル）描画
+ */
+function renderVisualAid() {
+  const canUseTenFrame = (currentOp === 'add' || currentOp === 'sub') && (a <= 20 && b <= 20 && (a + b) <= 20);
+  visualToggleBtn.disabled = !canUseTenFrame;
+
+  if (!canUseTenFrame || !showVisualAid) {
+    visualAid.classList.remove('active');
+    return;
+  }
+
+  visualAid.classList.add('active');
+  tenFramesContainer.innerHTML = '';
+
+  const totalCellsNeeded = (currentOp === 'add' ? (a + b > 10) : (a > 10)) ? 20 : 10;
+  const frameCount = totalCellsNeeded / 10;
+
+  for (let f = 0; f < frameCount; f++) {
+    const frame = document.createElement('div');
+    frame.className = 'ten-frame';
+    for (let c = 0; c < 10; c++) {
+      const idx = f * 10 + c;
+      const cell = document.createElement('div');
+      cell.className = 'tf-cell';
+
+      if (currentOp === 'add') {
+        if (idx < a) {
+          const dot = document.createElement('div');
+          dot.className = 'tf-dot num-a';
+          cell.appendChild(dot);
+        } else if (idx < a + b) {
+          const dot = document.createElement('div');
+          dot.className = 'tf-dot num-b';
+          cell.appendChild(dot);
+        }
+      } else if (currentOp === 'sub') {
+        if (idx < a) {
+          const dot = document.createElement('div');
+          // 後ろからb個にバツ印をつける
+          if (idx >= a - b) {
+            dot.className = 'tf-dot sub-crossed';
+          } else {
+            dot.className = 'tf-dot num-a';
+          }
+          cell.appendChild(dot);
+        }
+      }
+      frame.appendChild(cell);
+    }
+    tenFramesContainer.appendChild(frame);
+  }
+
+  if (currentOp === 'add') {
+    if (a + b > 10 && a < 10) {
+      const needForTen = 10 - a;
+      const rest = b - needForTen;
+      visualCaption.textContent = `青(${a}) に あと ${needForTen} で 10のまとまり！ のこりは ${rest} だから…`;
+    } else {
+      visualCaption.textContent = `青が ${a}こ、黄色が ${b}こ。あわせていくつ？`;
+    }
+  } else {
+    visualCaption.textContent = `${a}こ から ${b}こ(✕印) をひくと、のこりはいくつ？`;
+  }
+}
+
+/**
+ * UI更新と同期
+ */
+function getCurrentStepObj() {
+  const steps = OP_META[currentOp].steps;
+  return steps.find(s => s.id === currentStepId) || steps[0];
+}
+
+function renderStepChips() {
+  const steps = OP_META[currentOp].steps;
+  if (!steps.some(s => s.id === currentStepId)) {
+    currentStepId = steps[0].id;
+  }
+
+  digitMenu.innerHTML = '';
+  steps.forEach(st => {
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'chip' + (st.id === currentStepId ? ' active' : '');
+    btn.textContent = st.label;
+    btn.dataset.step = st.id;
+    btn.addEventListener('click', () => {
+      currentStepId = st.id;
+      applyModeUI();
+      resetSessionIfTimeMode();
+      newProblem();
+    });
+    digitMenu.appendChild(btn);
+  });
+}
+
+function applyModeUI() {
+  renderStepChips();
+  const meta = OP_META[currentOp];
+  const stepObj = getCurrentStepObj();
+
+  if (gameMode === 'review') {
+    subTitle.textContent = `ニガテ復習モード（のこり ${userData.mistakes.length}問）`;
+  } else {
+    subTitle.textContent = `${meta.labelJa}：${stepObj.label}`;
+  }
+
+  opSymbolEl.textContent = meta.symbol;
+  hintNote.textContent = stepObj.hint || '';
+
+  // 筆算フォームはわり算以外で利用可能
+  verticalToggleBtn.disabled = (currentOp === 'div');
+  if (currentOp === 'div' && isVerticalMode) {
+    isVerticalMode = false;
+    verticalToggleBtn.classList.remove('active');
+  }
+
+  problemEl.classList.remove('compact', 'tight', 'vertical');
+  if (isVerticalMode) {
+    problemEl.classList.add('vertical');
+  } else {
+    if (stepObj.digits === 2 || currentOp === 'mul' || currentOp === 'div') {
+      problemEl.classList.add('compact');
+    }
+    if (stepObj.digits === 3) {
+      problemEl.classList.add('tight');
+    }
+  }
+
+  opMenu.querySelectorAll('.chip').forEach(btn => {
+    btn.classList.toggle('active', btn.dataset.op === currentOp);
+  });
+
+  gameModeMenu.querySelectorAll('.chip').forEach(btn => {
+    btn.classList.toggle('active', btn.dataset.mode === gameMode);
+  });
+
+  // 10問アタック用プログレスバー表示
+  if (gameMode === 'time10') {
+    progressWrap.classList.add('active');
+    updateProgressUI();
+  } else {
+    progressWrap.classList.remove('active');
+  }
+}
+
+function updateProgressUI() {
+  progressText.textContent = `${Math.min(time10Progress + 1, 10)} / 10 問目`;
+  progressFill.style.width = `${(time10Progress / 10) * 100}%`;
+  const key = `${currentOp}_${currentStepId}`;
+  const best = userData.bestTimes[key];
+  bestTimeText.textContent = best ? `👑 ベスト: ${best.toFixed(1)}秒` : '👑 ベスト: --.-秒';
+}
+
+function syncAnswerUI() {
+  if (answerBuffer === '') {
+    answerDisplay.textContent = '?';
+    answerDisplay.classList.remove('filled');
+  } else {
+    answerDisplay.textContent = answerBuffer;
+    answerDisplay.classList.add('filled');
+  }
+  answerInput.value = answerBuffer;
+}
+
+function clearAnswer() {
+  answerBuffer = '';
+  syncAnswerUI();
+}
+
+function appendDigit(digit) {
+  if (locked) return;
+  playTone('tap');
+  if (answerBuffer === '0') {
+    answerBuffer = String(digit);
+  } else if (answerBuffer.length < 6) {
+    answerBuffer += String(digit);
+  }
+  syncAnswerUI();
+}
+
+function backspace() {
+  if (locked) return;
+  playTone('tap');
+  answerBuffer = answerBuffer.slice(0, -1);
+  syncAnswerUI();
+}
+
+function focusAnswerInput() {
+  answerInput.focus({ preventScroll: true });
+  answerArea.classList.add('is-focused');
+}
+
+function setKeypadEnabled(enabled) {
+  keypad.querySelectorAll('.key').forEach(k => k.disabled = !enabled);
+}
+
+/**
+ * タイマー制御
+ */
+function startStopwatch() {
+  stopStopwatch();
+  startTime = performance.now() - (elapsedSec * 1000);
+  timerInterval = setInterval(() => {
+    elapsedSec = (performance.now() - startTime) / 1000;
+    timerDisplayEl.textContent = `${elapsedSec.toFixed(1)}s`;
+  }, 100);
+}
+
+function stopStopwatch() {
+  if (timerInterval) {
+    clearInterval(timerInterval);
+    timerInterval = null;
+  }
+}
+
+function resetStopwatch() {
+  stopStopwatch();
+  elapsedSec = 0;
+  timerDisplayEl.textContent = '0.0s';
+}
+
+function resetSessionIfTimeMode() {
+  if (gameMode === 'time10') {
+    time10Progress = 0;
+    correctCount = 0;
+    wrongCount = 0;
+    streak = 0;
+    updateScoreboard();
+    resetStopwatch();
+    updateProgressUI();
+  }
+}
+
+/**
+ * 新しい問題の出題
+ */
+function newProblem() {
+  if (problemTimer) {
+    clearTimeout(problemTimer);
+    problemTimer = null;
+  }
+
+  hanamaruStamp.classList.remove('show');
+  clearScratchPad();
+
+  if (gameMode === 'review' && userData.mistakes.length === 0) {
+    feedbackEl.className = 'feedback ok';
+    feedbackTextEl.textContent = 'ニガテな問題はすべてクリアしました！🎉';
+    gameMode = 'free';
+    applyModeUI();
+  }
+
+  generateNumbers();
+  if (gameMode === 'review') applyModeUI();
+
+  numAEl.textContent = a;
+  numBEl.textContent = b;
+  clearAnswer();
+  answerArea.classList.remove('is-ok', 'is-ng');
+
+  feedbackTextEl.textContent = '';
+  feedbackEl.className = 'feedback empty';
+  nextProblemBtn.hidden = true;
+
+  locked = false;
+  setKeypadEnabled(true);
+  renderVisualAid();
+  focusAnswerInput();
+
+  if (gameMode === 'time10' && time10Progress === 0 && elapsedSec === 0) {
+    startStopwatch();
+  } else if (gameMode !== 'time10') {
+    resetStopwatch();
+    startStopwatch();
+  }
+}
+
+function updateScoreboard() {
+  correctCountEl.textContent = correctCount;
+  wrongCountEl.textContent = wrongCount;
+  streakCountEl.textContent = streak;
+}
+
+/**
+ * 解答判定
+ */
+function submitAnswer() {
+  if (locked || answerBuffer === '') return;
+  const userAnswer = parseInt(answerBuffer, 10);
+  if (Number.isNaN(userAnswer)) return;
+
+  const ans = getCorrectAnswer();
+  locked = true;
+  setKeypadEnabled(false);
+
+  if (gameMode !== 'time10') stopStopwatch();
+
+  if (userAnswer === ans) {
+    playTone('ok');
+    correctCount += 1;
+    streak += 1;
+    userData.totalSolved += 1;
+
+    // 復習モードで正解したらニガテリストから削除
+    if (gameMode === 'review') {
+      userData.mistakes = userData.mistakes.filter(
+        m => !(m.op === currentOp && m.a === a && m.b === b)
+      );
+    }
+
+    saveUserData();
+    syncHeaderBadges();
+
+    feedbackEl.className = 'feedback ok';
+    feedbackTextEl.textContent = `せいかい！ ${a} ${OP_META[currentOp].symbol} ${b} ＝ ${ans}`;
+    answerArea.classList.add('is-ok');
+    hanamaruStamp.classList.add('show');
+
+    if (gameMode === 'time10') {
+      time10Progress += 1;
+      updateProgressUI();
+      if (time10Progress >= 10) {
+        stopStopwatch();
+        setTimeout(showTimeAttackResult, 550);
+        updateScoreboard();
+        return;
+      }
+    }
+
+    problemTimer = setTimeout(newProblem, 650);
+  } else {
+    playTone('ng');
+    wrongCount += 1;
+    streak = 0;
+
+    // ニガテリストに登録（重複防止）
+    const exists = userData.mistakes.some(
+      m => m.op === currentOp && m.a === a && m.b === b
+    );
+    if (!exists) {
+      userData.mistakes.push({ op: currentOp, stepId: currentStepId, a, b });
+      saveUserData();
+      syncHeaderBadges();
+    }
+
+    feedbackEl.className = 'feedback ng';
+    feedbackTextEl.textContent = `おしい！ 正解は ${ans}`;
+    nextProblemBtn.hidden = false;
+    answerArea.classList.add('is-ng');
+
+    // 不正解時は自動で視覚ヒントを表示（対応範囲内の場合）
+    if ((currentOp === 'add' || currentOp === 'sub') && a <= 20 && b <= 20 && (a + b) <= 20) {
+      showVisualAid = true;
+      visualToggleBtn.classList.add('active');
+      renderVisualAid();
+    }
+
+    setTimeout(() => nextProblemBtn.focus(), 50);
+  }
+
+  updateScoreboard();
+}
+
+/**
+ * 10問タイムアタック結果表示
+ */
+function showTimeAttackResult() {
+  playTone('fanfare');
+  const totalTime = Number(elapsedSec.toFixed(1));
+  const totalAttempts = correctCount + wrongCount;
+  const acc = totalAttempts > 0 ? Math.round((correctCount / totalAttempts) * 100) : 100;
+
+  const key = `${currentOp}_${currentStepId}`;
+  const prevBest = userData.bestTimes[key];
+  let isNewRecord = false;
+
+  if (!prevBest || totalTime < prevBest) {
+    userData.bestTimes[key] = totalTime;
+    saveUserData();
+    isNewRecord = true;
+  }
+
+  newRecordBadge.hidden = !isNewRecord;
+  const stepObj = getCurrentStepObj();
+  modalSubText.textContent = `${OP_META[currentOp].labelJa}（${stepObj.label}）`;
+  modalTimeVal.textContent = `${totalTime}秒`;
+  modalAccVal.textContent = `${acc}%`;
+  resultModal.classList.add('show');
+}
+
+modalCloseBtn.addEventListener('click', () => {
+  resultModal.classList.remove('show');
+  resetSessionIfTimeMode();
+  newProblem();
+});
+
+/**
+ * 手書きメモ（Scratchpad）機能
+ */
+const ctx = scratchCanvas.getContext('2d');
+let drawing = false;
+
+function resizeCanvas() {
+  const rect = workspace.getBoundingClientRect();
+  scratchCanvas.width = rect.width;
+  scratchCanvas.height = rect.height;
+}
+
+window.addEventListener('resize', resizeCanvas);
+
+function clearScratchPad() {
+  ctx.clearRect(0, 0, scratchCanvas.width, scratchCanvas.height);
+}
+
+function getPos(e) {
+  const rect = scratchCanvas.getBoundingClientRect();
+  const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+  const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+  return { x: clientX - rect.left, y: clientY - rect.top };
+}
+
+scratchCanvas.addEventListener('pointerdown', (e) => {
+  if (!isScratchActive) return;
+  drawing = true;
+  const pos = getPos(e);
+  ctx.beginPath();
+  ctx.moveTo(pos.x, pos.y);
+  ctx.strokeStyle = 'rgba(26, 86, 142, 0.65)';
+  ctx.lineWidth = 3;
+  ctx.lineCap = 'round';
+});
+
+scratchCanvas.addEventListener('pointermove', (e) => {
+  if (!drawing || !isScratchActive) return;
+  const pos = getPos(e);
+  ctx.lineTo(pos.x, pos.y);
+  ctx.stroke();
+});
+
+window.addEventListener('pointerup', () => {
+  drawing = false;
+});
+
+/**
+ * イベントリスナー設定
+ */
+opMenu.addEventListener('click', (e) => {
+  const btn = e.target.closest('.chip');
+  if (!btn) return;
+  currentOp = btn.dataset.op;
+  currentStepId = OP_META[currentOp].steps[0].id;
+  applyModeUI();
+  resetSessionIfTimeMode();
+  newProblem();
+});
+
+gameModeMenu.addEventListener('click', (e) => {
+  const btn = e.target.closest('.chip');
+  if (!btn) return;
+  const mode = btn.dataset.mode;
+  if (mode === 'review' && userData.mistakes.length === 0) {
+    feedbackEl.className = 'feedback ok';
+    feedbackTextEl.textContent = '現在、復習するニガテ問題はありません！✨';
+    return;
+  }
+  gameMode = mode;
+  applyModeUI();
+  resetSessionIfTimeMode();
+  newProblem();
+});
+
+visualToggleBtn.addEventListener('click', () => {
+  showVisualAid = !showVisualAid;
+  visualToggleBtn.classList.toggle('active', showVisualAid);
+  renderVisualAid();
+  focusAnswerInput();
+});
+
+verticalToggleBtn.addEventListener('click', () => {
+  isVerticalMode = !isVerticalMode;
+  verticalToggleBtn.classList.toggle('active', isVerticalMode);
+  applyModeUI();
+  setTimeout(resizeCanvas, 50);
+  focusAnswerInput();
+});
+
+scratchToggleBtn.addEventListener('click', () => {
+  isScratchActive = !isScratchActive;
+  scratchToggleBtn.classList.toggle('active', isScratchActive);
+  scratchCanvas.classList.toggle('active', isScratchActive);
+  scratchClearBtn.hidden = !isScratchActive;
+  resizeCanvas();
+});
+
+scratchClearBtn.addEventListener('click', () => {
+  clearScratchPad();
+  focusAnswerInput();
+});
+
+soundToggleBtn.addEventListener('click', () => {
+  soundEnabled = !soundEnabled;
+  soundToggleBtn.classList.toggle('active', soundEnabled);
+  soundToggleBtn.textContent = soundEnabled ? '🔊 音 ON' : '🔇 音 OFF';
+});
+
+keypad.addEventListener('click', (e) => {
+  const btn = e.target.closest('.key');
+  if (!btn || btn.disabled) return;
+  const key = btn.dataset.key;
+  if (key === 'clear') clearAnswer();
+  else if (key === 'back') backspace();
+  else if (key === 'submit') submitAnswer();
+  else appendDigit(key);
+  focusAnswerInput();
+});
+
+nextProblemBtn.addEventListener('click', newProblem);
+
+resetBtn.addEventListener('click', () => {
+  correctCount = 0;
+  wrongCount = 0;
+  streak = 0;
+  time10Progress = 0;
+  updateScoreboard();
+  resetStopwatch();
+  updateProgressUI();
+  newProblem();
+});
+
+document.addEventListener('keydown', (e) => {
+  if (resultModal.classList.contains('show')) {
+    if (e.key === 'Enter') modalCloseBtn.click();
+    return;
+  }
+  if (locked) {
+    if (e.key === 'Enter' && !nextProblemBtn.hidden) {
+      e.preventDefault();
+      newProblem();
+    }
+    return;
+  }
+  if (e.key === 'Enter') {
+    e.preventDefault();
+    submitAnswer();
+  } else if (e.key === 'Backspace') {
+    e.preventDefault();
+    backspace();
+  } else if (e.key === 'Escape') {
+    e.preventDefault();
+    clearAnswer();
+  } else if (e.key >= '0' && e.key <= '9') {
+    e.preventDefault();
+    appendDigit(e.key);
+  }
+});
+
+answerArea.addEventListener('click', focusAnswerInput);
+
+// 初期化実行
+loadUserData();
+applyModeUI();
+updateScoreboard();
+setTimeout(resizeCanvas, 100);
+newProblem();
+</script>
 </body>
 </html>
